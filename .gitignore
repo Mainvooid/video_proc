@@ -1,0 +1,16 @@
+*.so
+*.pyc
+*.exe
+*.zip
+*.toc
+*.pkg
+*.pyz
+*.manifest
+.idea
+/data
+/venv
+/log
+/lib
+*.avi
+*.mp4
+
