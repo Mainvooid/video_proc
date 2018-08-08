@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1662</width>
-    <height>915</height>
+    <width>1692</width>
+    <height>669</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -36,26 +36,26 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1662</width>
+     <width>1692</width>
      <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_menu">
     <property name="title">
-     <string>菜单</string>
+     <string>菜单(&amp;M)</string>
     </property>
     <addaction name="action_run"/>
    </widget>
    <widget class="QMenu" name="menu_view">
     <property name="title">
-     <string>视图</string>
+     <string>视图(&amp;V)</string>
     </property>
-    <addaction name="action_video_view"/>
-    <addaction name="action_settings_view"/>
+    <addaction name="action_view_video"/>
+    <addaction name="action_view_settings"/>
    </widget>
    <widget class="QMenu" name="menu_help">
     <property name="title">
-     <string>帮助</string>
+     <string>帮助(&amp;H)</string>
     </property>
    </widget>
    <addaction name="menu_menu"/>
@@ -90,8 +90,8 @@
       <widget class="QScrollArea" name="scrollArea">
        <property name="minimumSize">
         <size>
-         <width>1000</width>
-         <height>800</height>
+         <width>980</width>
+         <height>550</height>
         </size>
        </property>
        <property name="frameShape">
@@ -108,14 +108,14 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>1000</width>
-          <height>800</height>
+          <width>976</width>
+          <height>546</height>
          </rect>
         </property>
         <property name="minimumSize">
          <size>
-          <width>1000</width>
-          <height>800</height>
+          <width>960</width>
+          <height>540</height>
          </size>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -123,6 +123,12 @@
           <widget class="QLabel" name="label_showFrame">
            <property name="enabled">
             <bool>true</bool>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>960</width>
+             <height>540</height>
+            </size>
            </property>
           </widget>
          </item>
@@ -134,6 +140,9 @@
    </widget>
   </widget>
   <widget class="QDockWidget" name="dockWidget_settings">
+   <property name="features">
+    <set>QDockWidget::AllDockWidgetFeatures</set>
+   </property>
    <property name="windowTitle">
     <string>设置</string>
    </property>
@@ -146,7 +155,7 @@
       <widget class="QScrollArea" name="scrollArea_2">
        <property name="minimumSize">
         <size>
-         <width>600</width>
+         <width>650</width>
          <height>400</height>
         </size>
        </property>
@@ -161,13 +170,13 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>600</width>
-          <height>775</height>
+          <width>646</width>
+          <height>546</height>
          </rect>
         </property>
         <property name="minimumSize">
          <size>
-          <width>600</width>
+          <width>646</width>
           <height>400</height>
          </size>
         </property>
@@ -311,6 +320,9 @@
               <property name="text">
                <string>开启阴影检测：</string>
               </property>
+              <property name="buddy">
+               <cstring>cBox_shadow</cstring>
+              </property>
              </widget>
             </item>
             <item row="2" column="1">
@@ -324,6 +336,9 @@
              <widget class="QLabel" name="label_foreproc">
               <property name="text">
                <string>开启前景处理：</string>
+              </property>
+              <property name="buddy">
+               <cstring>cBox_foreproc</cstring>
               </property>
              </widget>
             </item>
@@ -339,6 +354,9 @@
               <property name="text">
                <string>背景参考历史帧数：</string>
               </property>
+              <property name="buddy">
+               <cstring>sBox_history</cstring>
+              </property>
              </widget>
             </item>
             <item row="4" column="1">
@@ -353,6 +371,9 @@
               <property name="text">
                <string>运动检测方差阈值：</string>
               </property>
+              <property name="buddy">
+               <cstring>sBox_threshold</cstring>
+              </property>
              </widget>
             </item>
             <item row="5" column="1">
@@ -366,6 +387,9 @@
              <widget class="QLabel" name="label_area">
               <property name="text">
                <string>运动检测面积：</string>
+              </property>
+              <property name="buddy">
+               <cstring>sBox_area</cstring>
               </property>
              </widget>
             </item>
@@ -384,6 +408,9 @@
               <property name="text">
                <string>背景比率：</string>
               </property>
+              <property name="buddy">
+               <cstring>dsBox_ratio</cstring>
+              </property>
              </widget>
             </item>
             <item row="7" column="1">
@@ -401,6 +428,9 @@
               <property name="text">
                <string>前景滤波核尺寸：</string>
               </property>
+              <property name="buddy">
+               <cstring>sBox_blursize</cstring>
+              </property>
              </widget>
             </item>
             <item row="8" column="1">
@@ -410,6 +440,9 @@
              <widget class="QLabel" name="label_erodeshape">
               <property name="text">
                <string>腐蚀/膨胀核尺寸：</string>
+              </property>
+              <property name="buddy">
+               <cstring>cBox_erodeshape</cstring>
               </property>
              </widget>
             </item>
@@ -442,6 +475,9 @@
               <property name="text">
                <string>允许的不连续帧数：</string>
               </property>
+              <property name="buddy">
+               <cstring>sBox_undetframes</cstring>
+              </property>
              </widget>
             </item>
             <item row="10" column="1">
@@ -466,6 +502,9 @@
            <layout class="QVBoxLayout" name="verticalLayout_5">
             <item>
              <widget class="QPushButton" name="pBtn_getBackground">
+              <property name="toolTip">
+               <string>刚开始会按照参考帧数更新一次背景，</string>
+              </property>
               <property name="text">
                <string>更新背景</string>
               </property>
@@ -490,6 +529,9 @@
          </item>
          <item>
           <widget class="QProgressBar" name="progressBar">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
            <property name="value">
             <number>0</number>
            </property>
@@ -504,7 +546,7 @@
   </widget>
   <action name="action_run">
    <property name="icon">
-    <iconset resource="../conf/resource.qrc">
+    <iconset resource="../../conf/resource.qrc">
      <normaloff>:/picture/res/run.png</normaloff>:/picture/res/run.png</iconset>
    </property>
    <property name="text">
@@ -522,7 +564,7 @@
     <bool>false</bool>
    </property>
    <property name="icon">
-    <iconset resource="../conf/resource.qrc">
+    <iconset resource="../../conf/resource.qrc">
      <normaloff>:/picture/res/stop.png</normaloff>:/picture/res/stop.png</iconset>
    </property>
    <property name="text">
@@ -540,7 +582,7 @@
     <bool>false</bool>
    </property>
    <property name="icon">
-    <iconset resource="../conf/resource.qrc">
+    <iconset resource="../../conf/resource.qrc">
      <normaloff>:/picture/res/pause.png</normaloff>:/picture/res/pause.png</iconset>
    </property>
    <property name="text">
@@ -553,44 +595,41 @@
     <string>Ctrl+P</string>
    </property>
   </action>
-  <action name="action_video_view">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
+  <action name="action_view_video">
    <property name="text">
     <string>视频</string>
    </property>
   </action>
-  <action name="action_settings_view">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
+  <action name="action_view_settings">
    <property name="text">
     <string>设置</string>
    </property>
   </action>
  </widget>
  <tabstops>
-  <tabstop>tabWidget</tabstop>
-  <tabstop>lineEdit_videoFile</tabstop>
   <tabstop>pBtn_getFile</tabstop>
-  <tabstop>lineEdit_saveDir</tabstop>
   <tabstop>pBtn_getDir</tabstop>
   <tabstop>cBox_scene</tabstop>
-  <tabstop>sBox_cam_num</tabstop>
   <tabstop>cBox_shadow</tabstop>
-  <tabstop>sBox_history</tabstop>
   <tabstop>cBox_foreproc</tabstop>
+  <tabstop>sBox_history</tabstop>
   <tabstop>sBox_threshold</tabstop>
   <tabstop>sBox_area</tabstop>
   <tabstop>dsBox_ratio</tabstop>
   <tabstop>sBox_blursize</tabstop>
   <tabstop>cBox_erodeshape</tabstop>
   <tabstop>sBox_undetframes</tabstop>
+  <tabstop>pBtn_getBackground</tabstop>
+  <tabstop>pBtn_showBackground</tabstop>
   <tabstop>scrollArea</tabstop>
+  <tabstop>lineEdit_videoFile</tabstop>
+  <tabstop>lineEdit_saveDir</tabstop>
+  <tabstop>sBox_cam_num</tabstop>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>scrollArea_2</tabstop>
  </tabstops>
  <resources>
-  <include location="../conf/resource.qrc"/>
+  <include location="../../conf/resource.qrc"/>
  </resources>
  <connections/>
 </ui>

@@ -15,10 +15,10 @@ import logging
 import sys
 
 # 获取logger实例，如果参数为空则返回root logger
-logger = logging.getLogger("App")
+logger = logging.getLogger()
 
 # 指定logger输出格式
-formatter = logging.Formatter('%(asctime)s %(levelname)-8s: %(message)s')
+formatter = logging.Formatter('%(asctime)s %(levelname)-6s: %(message)s')
 
 # # 文件日志
 # file_handler = logging.FileHandler("../log/app.log")

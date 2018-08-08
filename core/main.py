@@ -14,8 +14,7 @@ from __future__ import unicode_literals
 
 import sys
 from PyQt5.QtWidgets import QApplication
-
-import control.main_controller as control
+import core.control.main_controller as control
 
 if __name__ == '__main__':
     # 创建应用程序

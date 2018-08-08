@@ -9,19 +9,16 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 """
-线程处理类
+线程处理模块
 """
 import time
 import threading
 import cv2
 import numpy as np
 import os.path as osp
-from PyQt5.QtCore import QThread
-from PyQt5.QtGui import QImage
-from PyQt5.QtGui import QPixmap
-from PyQt5 import QtWidgets
 
-from control.logger import *
+from core.control.logger import *
+import init_path
 
 
 # todo:使用QThread替换threading.Thread
@@ -40,7 +37,6 @@ class MotionDetThread(threading.Thread):
 
         # ui类
         self.model = model
-        self.view = model.view
 
         # 相关参数
         self.fps = None
@@ -95,15 +91,18 @@ class MotionDetThread(threading.Thread):
         # 阴影阈值
         if self.DETECT_SHADOWS_FLAG:
             mog2.setShadowThreshold(0.8)
-
+        total_frame_num = 0
+        total_frame_time = 0
         if isinstance(self.input, int):
             # 摄像模式
+            logger.debug("摄像模式")
 
             # 读帧并处理
             self.frameNo = 0  # 第几帧
-            self.learningFrameNo =0
+            self.learningFrameNo = 0
             motion_start, motion_count = 0, 0  # 运动帧计数
             while (True):
+                start_time = time.time()
                 # 阻塞标志
                 self._isNotPause.wait()
                 if self._isRunning.isSet() == False:
@@ -112,22 +111,24 @@ class MotionDetThread(threading.Thread):
                 if self.learningFrameNo == self.mog2_history:
                     # 停止背景更新
                     self.LearningRate = 0
-                    self.learningFrameNo =0
+                    self.learningFrameNo = 0
+                    # 保存背景
+                    back_img_path = osp.join(init_path.project_dir, "data/background.jpg")
+                    cv2.imwrite(back_img_path, mog2.getBackgroundImage())
 
-                flag, frame = self.capture.read()
+                ok, frame = self.capture.read()
+                if not ok:
+                    logger.exception("读取视频异常!")
                 self.frameNo += 1
                 self.learningFrameNo += 1
-
-                progress_value = 99
-                self.view.statusbar.showMessage("处理中: %d%%" % progress_value, 500)
-                self.view.progressBar.setValue(progress_value)
+                total_frame_num += 1
 
                 # 混合高斯建模获取前景与背景
                 rows, cols, ch = frame.shape
                 foreground = np.zeros(shape=(rows, cols, 1), dtype=np.uint8)
 
                 # 计算前景蒙版,动态设置学习率，为0时背景不更新，为1时逐帧更新，默认为-1，即算法自动更新；
-                mog2.apply(image=frame, fgmask=foreground,learningRate=self.LearningRate)
+                mog2.apply(image=frame, fgmask=foreground, learningRate=self.LearningRate)
 
                 # 中值滤波
                 cv2.medianBlur(src=foreground, dst=foreground, ksize=self.medianBlur_ksize)
@@ -142,46 +143,99 @@ class MotionDetThread(threading.Thread):
                                                               mode=cv2.RETR_TREE,
                                                               method=cv2.CHAIN_APPROX_SIMPLE)
                 metion_flag = False
+                cv2.drawContours(foreground, contours, -1, (0, 0, 255), 3, hierarchy=hierarchy)  # 会抵消掉上一层的轮廓
+                # 降噪后重新找轮廓
+                image, contours, hierarchy = cv2.findContours(image=foreground,
+                                                              mode=cv2.RETR_TREE,
+                                                              method=cv2.CHAIN_APPROX_SIMPLE)
                 # 显示轮廓
-                for c in contours:
+                rect = []
+                for i, c in enumerate(contours):
                     # 判断轮廓面积
                     if cv2.contourArea(c) > self.area_size:
                         metion_flag = True
-                        # 包住轮廓的最小矩形的坐标
+                        # 包住轮廓的最小矩形的坐标（x，y为左上点坐标）
                         (x, y, w, h) = cv2.boundingRect(c)
-
-                        # 画矩形框
-                        cv2.rectangle(img=foreground, pt1=(x, y), pt2=(x + w, y + h), color=(255, 255, 0),
-                                      thickness=3)
-                        cv2.rectangle(img=frame, pt1=(x, y), pt2=(x + w, y + h), color=(255, 255, 0), thickness=3)
+                        rect.append(np.array([[x, y], [x + w, y], [x, y + h], [x + w, y + h]]))
+                if len(rect) == 1:
+                    # 当前帧只找到一个轮廓
+                    end_time = time.time()
+                    # 计算帧处理时间,s->ms
+                    frame_proc_time = (end_time - start_time) * 1000
+                    # 统计总时间
+                    total_frame_time += frame_proc_time
+                    # 跨线程发送进度和时间信号，更新UI
+                    progress_value = 99
+                    self.model.progress_signal.emit(progress_value, frame_proc_time)
+                    # 刷新页面防止卡顿
+                    self.model.view_refresh_signal.emit()
+                    logger.debug("frame_proc_time:{:.2f}".format(frame_proc_time))
+                    continue
+                else:
+                    for j in range(len(rect)):
+                        r0 = cv2.minAreaRect(rect[0])
+                        # 循环中是否找到相交点
+                        isFind = False
+                        for k in range(1, len(rect)):
+                            r1 = cv2.minAreaRect(rect[k])
+                            # 计算相交区域的顶点
+                            retval, intersectingRegion = cv2.rotatedRectangleIntersection(r0, r1)
+                            if retval == cv2.INTERSECT_PARTIAL or cv2.INTERSECT_FULL:
+                                # 如果相交或内含，由合并点集计算最小正矩形
+                                logger.debug("存在交或含")
+                                points = np.vstack((rect[0], rect[k]))
+                                (x, y, w, h) = cv2.boundingRect(points)
+                                # 列表元素变化
+                                logger.debug("j:{},k:{}".format(0, k))
+                                rect.pop(0)
+                                rect.pop(k - 1)
+                                rect.append(np.array([[x, y], [x + w, y], [x, y + h], [x + w, y + h]]))
+                                isFind = True
+                                break
+                        if isFind == False:
+                            logger.debug("当前没有交或含")
+                            rect.append(rect[0])
+                            rect.pop(0)
+                # 画矩形框
+                for r in rect:
+                    p = r.tolist()
+                    (x, y) = p[0]
+                    w = p[3][0] - x
+                    h = p[3][1] - y
+                    cv2.rectangle(img=frame, pt1=(x, y), pt2=(x + w, y + h), color=(255, 255, 0), thickness=3)
 
                 # 更新运动帧计数并打印
-                fx = 1.0
-                fy = 1.0
                 if metion_flag and self.frameNo != 1:
                     if motion_start == 0:
                         motion_start = self.frameNo
 
                         # 在UI界面显示
-                        pixmap = cv2.resize(frame, None, fx=fx, fy=fy)
-                        pixmap = QImage(pixmap, pixmap.shape[1], pixmap.shape[0], pixmap.shape[1] * 3,
-                                        QImage.Format_RGB888).rgbSwapped()
-                        self.view.label_showFrame.setPixmap(QPixmap(pixmap))
+                        self.model.frame_signal.emit(frame)
 
                     elif self.frameNo <= motion_start + motion_count + self.undetected_size:  # 允许n帧以内不连续的误差
                         motion_count += 1
 
                         # 在UI界面显示
-                        pixmap = cv2.resize(frame, None, fx=fx, fy=fy)
-                        pixmap = QImage(pixmap, pixmap.shape[1], pixmap.shape[0], pixmap.shape[1] * 3,
-                                        QImage.Format_RGB888).rgbSwapped()
-                        self.view.label_showFrame.setPixmap(QPixmap(pixmap))
+                        self.model.frame_signal.emit(frame)
 
                     else:
                         # print("运动帧：%d-%d" % (motion_start, motion_start + motion_count))
                         motion_start, motion_count = 0, 0
+
+                end_time = time.time()
+                # 计算帧处理时间,s->ms
+                frame_proc_time = (end_time - start_time) * 1000
+                # 统计总时间
+                total_frame_time += frame_proc_time
+                # 跨线程发送进度和时间信号，更新UI
+                progress_value = 99
+                self.model.progress_signal.emit(progress_value, frame_proc_time)
+                # 刷新页面防止卡顿
+                self.model.view_refresh_signal.emit()
+                logger.debug("frame_proc_time:{:.2f}".format(frame_proc_time))
         else:
             # 文件模式
+            logger.debug("文件模式")
 
             # 读帧并处理
             self.frameNo = 0  # 第几帧
@@ -205,6 +259,7 @@ class MotionDetThread(threading.Thread):
 
             # 视频帧数
             total_frame_num = self.capture.get(cv2.CAP_PROP_FRAME_COUNT)
+            total_frame_time = 0
 
             # #p
             # self.writer1 = cv2.VideoWriter()
@@ -213,17 +268,21 @@ class MotionDetThread(threading.Thread):
             # output_file_name1 = osp.join(self.output_dir, "proc_" + output_name1 + ".avi")
             #
             # self.writer1.open(output_file_name1, fourcc=codec, fps=self.fps, frameSize=frame_size, isColor=isColor)
-               
+
             while (True):
+                start_time = time.time()
                 # 阻塞标志
                 self._isNotPause.wait()
                 if (self._isRunning.isSet() == False) or (total_frame_num == self.frameNo):
                     break
 
-                if self.learningFrameNo==self.mog2_history:
+                if self.learningFrameNo == self.mog2_history:
                     # 停止背景更新
-                    self.LearningRate=0
-                    self.learningFrameNo=0
+                    self.LearningRate = 0
+                    self.learningFrameNo = 0
+                    # 保存背景
+                    back_img_path = osp.join(init_path.project_dir, "data/background.jpg")
+                    cv2.imwrite(back_img_path, mog2.getBackgroundImage())
 
                 ok, frame = self.capture.read()
                 if not ok:
@@ -231,16 +290,12 @@ class MotionDetThread(threading.Thread):
                 self.frameNo += 1
                 self.learningFrameNo += 1
 
-                progress_value = self.frameNo / total_frame_num * 100
-                self.view.statusbar.showMessage("处理中: %d%%" % progress_value, 500)
-                self.view.progressBar.setValue(progress_value)
-
                 # 混合高斯建模获取前景与背景
                 rows, cols, ch = frame.shape
                 foreground = np.zeros(shape=(rows, cols, 1), dtype=np.uint8)
 
                 # 计算前景蒙版,动态设置学习率，为0时背景不更新，为1时逐帧更新，默认为-1，即算法自动更新；
-                mog2.apply(image=frame, fgmask=foreground,learningRate=self.LearningRate)
+                mog2.apply(image=frame, fgmask=foreground, learningRate=self.LearningRate)
 
                 # 中值滤波
                 cv2.medianBlur(src=foreground, dst=foreground, ksize=self.medianBlur_ksize)
@@ -261,23 +316,21 @@ class MotionDetThread(threading.Thread):
                                                               method=cv2.CHAIN_APPROX_SIMPLE)
                 metion_flag = False
 
+                # a0 = cv2.resize(foreground, None, fx=0.5, fy=0.5)
+                # cv2.imshow("image0", a0)
+                # cv2.waitKey(1)
 
-                a0 = cv2.resize(foreground, None, fx=0.5, fy=0.5)
-                cv2.imshow("image0", a0)
-                cv2.waitKey(1)
-
-                cv2.drawContours(foreground, contours, -1, (0, 0, 255), 3,hierarchy=hierarchy) # 会抵消掉上一层的轮廓
-                a = cv2.resize(foreground, None, fx=0.5, fy=0.5)
-                cv2.imshow("image", a)
-                cv2.waitKey(1)
-                # self.writer1.write(foreground)
+                cv2.drawContours(foreground, contours, -1, (0, 0, 255), 3, hierarchy=hierarchy)  # 会抵消掉上一层的轮廓
+                # a = cv2.resize(foreground, None, fx=0.5, fy=0.5)
+                # cv2.imshow("image", a)
+                # cv2.waitKey(1)
 
                 image, contours, hierarchy = cv2.findContours(image=foreground,
                                                               mode=cv2.RETR_TREE,
                                                               method=cv2.CHAIN_APPROX_SIMPLE)
 
                 # 显示轮廓
-                rect=[]
+                rect = []
                 for i, c in enumerate(contours):
                     # print("c:\n",c)#c=contours[i]
                     # # 下一层轮廓 蓝色
@@ -288,9 +341,9 @@ class MotionDetThread(threading.Thread):
                     # if (hierarchy[0][i][1] != -1 and hierarchy != []):
                     #     cv2.drawContours(frame, contours, i, (0,255,0), 3)
 
-                    # 父轮廓 黄色
+                    # #父轮廓 黄色
                     # if (hierarchy[0][i][2] != -1 and hierarchy != []):
-                        # cv2.drawContours(frame, contours, i, (0,255,255), 3)
+                    # cv2.drawContours(frame, contours, i, (0,255,255), 3)
                     # # 子轮廓 红色
                     # if (hierarchy[0][i][3] != -1 and hierarchy != []):
                     #     cv2.drawContours(frame, contours, i, (0, 0, 255), 3)
@@ -307,45 +360,53 @@ class MotionDetThread(threading.Thread):
                         # 包住轮廓的最小矩形的坐标（x，y为左上点坐标）
                         (x, y, w, h) = cv2.boundingRect(c)
 
-                        rect.append(np.array([[x, y], [x+w, y], [x, y+h], [x+w, y+h]]))
+                        rect.append(np.array([[x, y], [x + w, y], [x, y + h], [x + w, y + h]]))
 
-                if len(rect)==1:
+                if len(rect) == 1:
                     # 当前帧只找到一个轮廓
+                    end_time = time.time()
+                    # 计算帧处理时间,s->ms
+                    frame_proc_time = (end_time - start_time) * 1000
+                    # 统计总时间
+                    total_frame_time += frame_proc_time
+                    # 跨线程发送进度和时间信号，更新UI
+                    progress_value = self.frameNo / total_frame_num * 100
+                    self.model.progress_signal.emit(progress_value, frame_proc_time)
+                    # 刷新页面防止卡顿
+                    self.model.view_refresh_signal.emit()
+                    logger.debug("frame_proc_time:{:.2f}".format(frame_proc_time))
                     continue
                 else:
                     for j in range(len(rect)):
                         r0 = cv2.minAreaRect(rect[0])
                         # 循环中是否找到相交点
-                        isFind=False
-                        for k in range(start=1,stop=len(rect)):
+                        isFind = False
+                        for k in range(1, len(rect)):
                             r1 = cv2.minAreaRect(rect[k])
                             # 计算相交区域的顶点
                             retval, intersectingRegion = cv2.rotatedRectangleIntersection(r0, r1)
-                            if retval ==cv2.INTERSECT_PARTIAL  or cv2.INTERSECT_FULL:
+                            if retval == cv2.INTERSECT_PARTIAL or cv2.INTERSECT_FULL:
                                 # 如果相交或内含，由合并点集计算最小正矩形
                                 logger.debug("存在交或含")
-                                points=np.vstack((rect[0],rect[k]))
+                                points = np.vstack((rect[0], rect[k]))
                                 (x, y, w, h) = cv2.boundingRect(points)
                                 # 列表元素变化
-                                logger.debug("j:{},k+1+j:{}".format(0,k))
                                 rect.pop(0)
-                                rect.pop(k-1)
+                                rect.pop(k - 1)
                                 rect.append(np.array([[x, y], [x + w, y], [x, y + h], [x + w, y + h]]))
-                                isFind=True
+                                isFind = True
                                 break
-                        if isFind==False:
+                        if isFind == False:
                             logger.debug("当前没有交或含")
                             rect.append(rect[0])
                             rect.pop(0)
 
-
                 # 画矩形框
                 for r in rect:
-
-                    p=r.tolist()
-                    (x,y)=p[0]
-                    w= p[3][0]-x
-                    h= p[3][1]-y
+                    p = r.tolist()
+                    (x, y) = p[0]
+                    w = p[3][0] - x
+                    h = p[3][1] - y
                     cv2.rectangle(img=foreground, pt1=(x, y), pt2=(x + w, y + h), color=(255, 255, 0),
                                   thickness=3)
                     cv2.rectangle(img=frame, pt1=(x, y), pt2=(x + w, y + h), color=(255, 255, 0), thickness=3)
@@ -355,48 +416,45 @@ class MotionDetThread(threading.Thread):
                 # cv2.waitKey(1)
 
                 # 更新运动帧计数并打印
-                # todo:设置画面大小可调整
-                fx = 0.5
-                fy = 0.5
+
                 if metion_flag and self.frameNo != 1:
                     if motion_start == 0:
                         motion_start = self.frameNo
-                        logger.debug("write")
+                        # 写入视频
                         self.writer.write(frame)
-                        # time.sleep(0.1)
-
                         # 在UI界面显示
-                        pixmap = cv2.resize(frame, None, fx=fx, fy=fy)
-                        pixmap = QImage(pixmap, pixmap.shape[1], pixmap.shape[0], pixmap.shape[1] * 3,
-                                        QImage.Format_RGB888).rgbSwapped()
-                        self.view.label_showFrame.setPixmap(QPixmap(pixmap))
+                        self.model.frame_signal.emit(frame)
+
                     elif self.frameNo <= motion_start + motion_count + self.undetected_size:  # 允许n帧以内不连续的误差
                         motion_count += 1
-                        logger.debug("write")
+                        # 写入视频
                         self.writer.write(frame)
-                        # time.sleep(0.1)
-
                         # 在UI界面显示
-                        pixmap = cv2.resize(frame, None, fx=fx, fy=fy)
-                        pixmap = QImage(pixmap, pixmap.shape[1], pixmap.shape[0], pixmap.shape[1] * 3,
-                                        QImage.Format_RGB888).rgbSwapped()
-                        self.view.label_showFrame.setPixmap(QPixmap(pixmap))
+                        self.model.frame_signal.emit(frame)
+
                     else:
                         # print("运动帧：%d-%d" % (motion_start, motion_start + motion_count))
                         motion_start, motion_count = 0, 0
-                # 阻塞标志
-                self._isNotPause.wait()
+                end_time = time.time()
+                # 计算帧处理时间,s->ms
+                frame_proc_time = (end_time - start_time) * 1000
+                # 统计总时间
+                total_frame_time += frame_proc_time
+                # 跨线程发送进度和时间信号，更新UI
+                progress_value = self.frameNo / total_frame_num * 100
+                self.model.progress_signal.emit(progress_value, frame_proc_time)
+                # 刷新页面防止卡顿
+                self.model.view_refresh_signal.emit()
+                logger.debug("frame_proc_time:{:.2f}".format(frame_proc_time))
             self.writer.release()
-            # self.writer1.release()
         self.capture.release()
-
+        average_time = total_frame_time / total_frame_num
+        self.model.proc_finish_signal.emit(average_time)
         if self._isRunning.isSet() == False:
             # 若因为停止线程而退出
             logger.debug("因为用户停止，线程退出")
-            return 0
-
-        self.model.success_signal.emit()
-        logger.debug("线程执行完成！")
+        else:
+            logger.debug("线程执行完成！")
         return 0
 
     def pause(self):
@@ -549,7 +607,7 @@ class MotionDetThread(threading.Thread):
 #
 # class MotionDetBaseOnBackgroundThread(threading.Thread):
 #     """
-#     动作检测线程类,只是为了和UI分离，并非并发
+#     动作检测线程类,只是为了和UI分离，并非并发（基于背景减除）
 #     """
 #
 #     def __init__(self, model):

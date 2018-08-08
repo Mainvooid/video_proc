@@ -1,0 +1,8 @@
+<RCC>
+  <qresource prefix="picture">
+    <file>../res/main.ico</file>
+    <file>../res/pause.png</file>
+    <file>../res/run.png</file>
+    <file>../res/stop.png</file>
+  </qresource>
+</RCC>
