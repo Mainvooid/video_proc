@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['..\\core\\main.py'],
-             pathex=['D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\venv\\Lib\\site-packages\\PyQt5\\Qt\\bin', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\res', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\core', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\core\\view', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\core\\model', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\core\\control', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\core\\conf', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\build'],
+             pathex=['D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\venv\\Lib\\site-packages\\PyQt5\\Qt\\bin', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\res', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\core', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\core\\view', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\core\\model', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\core\\control', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\conf', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\build'],
              binaries=[('D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\venv\\Lib\\site-packages\\cv2\\opencv_ffmpeg341_64.dll', './cv2')],
              datas=[('D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\conf\\settings.json', './conf')],
              hiddenimports=[],

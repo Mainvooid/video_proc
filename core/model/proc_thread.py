@@ -68,7 +68,6 @@ class MotionDetThread(threading.Thread):
         # 设置帧率
         self.LearningRate = LearningRate
 
-    @property
     def run(self):
         # 打开视频
         try:
@@ -799,7 +798,6 @@ class MotionDetThread(threading.Thread):
 #                         cv2.rectangle(img=frame, pt1=(x, y), pt2=(x + w, y + h), color=(255, 255, 0), thickness=3)
 #
 #                 # 更新运动帧计数并打印
-#                 # todo:设置画面大小可调整
 #                 fx = 0.5
 #                 fy = 0.5
 #                 if metion_flag and self.frameNo != 1:

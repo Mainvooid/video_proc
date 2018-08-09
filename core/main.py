@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 """
 
 import sys
+import qdarkstyle
 from PyQt5.QtWidgets import QApplication
 import core.control.main_controller as control
 
@@ -21,6 +22,8 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     # 初始化窗口（GUI程序具体实现类）
     window = control.Window()
+    # 设置QSS样式
+    app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
     # 获取电脑屏幕大小
     desktop = app.desktop().availableGeometry()  # (0,0,1920,1040)可获得的桌面（高度减了任务栏）
     # screen=app.desktop().screenGeometry() #(0,0,1920,1080) 屏幕大小

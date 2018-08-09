@@ -165,25 +165,31 @@ class MainModel(QObject):
             self.input = 0
             self.output_dir_name = None
 
-        self.thread = proc_thread.MotionDetThread(model=self)
-        self.thread.setDaemon(True)  # 设置守护线程，以在主线程退出后退出
-        self.thread.setDirs(self.input, self.output_dir_name)
+        if self.input is not "":
+            self.thread = proc_thread.MotionDetThread(model=self)
+            self.thread.setDaemon(True)  # 设置守护线程，以在主线程退出后退出
+            self.thread.setDirs(self.input, self.output_dir_name)
 
-        self.thread.setArgs(history=self.view.sBox_history.value(),
-                            threshold=self.view.sBox_threshold.value(),
-                            detshadow=self.view.cBox_shadow.checkState(),
-                            backratio=self.view.dsBox_ratio.value(),
-                            blursize=self.view.sBox_blursize.value(),
-                            foreproc=self.view.cBox_foreproc.checkState(),
-                            erodeshape=tuple(eval(self.view.cBox_erodeshape.currentText())),
-                            areasize=self.view.sBox_area.value(),
-                            undetsize=self.view.sBox_undetframes.value())
+            self.thread.setArgs(history=self.view.sBox_history.value(),
+                                threshold=self.view.sBox_threshold.value(),
+                                detshadow=self.view.cBox_shadow.checkState(),
+                                backratio=self.view.dsBox_ratio.value(),
+                                blursize=self.view.sBox_blursize.value(),
+                                foreproc=self.view.cBox_foreproc.checkState(),
+                                erodeshape=tuple(eval(self.view.cBox_erodeshape.currentText())),
+                                areasize=self.view.sBox_area.value(),
+                                undetsize=self.view.sBox_undetframes.value())
 
-        self.on_action_triggered_view_enabled(False)
-        self.thread.start()
-        self.view.statusbar.showMessage("开始处理视频！", 3000)
-        logger.debug("开始处理视频")
-        # self.thread.join()  # 等待完成但是会阻塞线程
+            self.on_action_triggered_view_enabled(False)
+            self.thread.start()
+            self.view.statusbar.showMessage("开始处理！", 3000)
+            logger.debug("开始处理")
+        else:
+            self.view.action_run.setEnabled(True)
+            self.view.action_pause.setEnabled(False)
+            self.view.action_stop.setEnabled(False)
+            self.view.statusbar.showMessage("Error,参数错误！", 3000)
+            logger.exception("Error，参数错误")
 
     def on_action_pause_triggered(self):
 
@@ -295,7 +301,7 @@ class MainModel(QObject):
         try:
             background = cv2.imread(back_img_path)
             background = cv2.resize(background, None, fx=0.5, fy=0.5)
-            cv2.imshow("背景", background)
+            cv2.imshow("Background", background)
         except:
             logger.exception("图片不存在或无法打开图片！")
         else:

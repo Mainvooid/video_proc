@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>1692</width>
-    <height>669</height>
+    <height>720</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -109,7 +109,7 @@
           <x>0</x>
           <y>0</y>
           <width>976</width>
-          <height>546</height>
+          <height>597</height>
          </rect>
         </property>
         <property name="minimumSize">
@@ -156,7 +156,7 @@
        <property name="minimumSize">
         <size>
          <width>650</width>
-         <height>400</height>
+         <height>550</height>
         </size>
        </property>
        <property name="frameShape">
@@ -166,18 +166,10 @@
         <bool>true</bool>
        </property>
        <widget class="QWidget" name="scrollAreaContents_settings">
-        <property name="geometry">
-         <rect>
-          <x>0</x>
-          <y>0</y>
-          <width>646</width>
-          <height>546</height>
-         </rect>
-        </property>
         <property name="minimumSize">
          <size>
           <width>646</width>
-          <height>400</height>
+          <height>540</height>
          </size>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -362,7 +354,7 @@
             <item row="4" column="1">
              <widget class="QSpinBox" name="sBox_history">
               <property name="maximum">
-               <number>10000</number>
+               <number>100000</number>
               </property>
              </widget>
             </item>
@@ -466,6 +458,16 @@
               <item>
                <property name="text">
                 <string>(9,9)</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>(11,11)</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>(13,13)</string>
                </property>
               </item>
              </widget>
