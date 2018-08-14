@@ -29,13 +29,13 @@ VSVersionInfo(
       [
       StringTable(
         u'080404b0',
-        [StringStruct(u'CompanyName', u'Gloud'),
-        StringStruct(u'FileDescription', u'Gloud Video Processing Demo'),
+        [StringStruct(u'CompanyName', u'iPanda'),
+        StringStruct(u'FileDescription', u'Video Processing Demo'),
         StringStruct(u'FileVersion', u'0.0.1'),
-        StringStruct(u'InternalName', u'Gloud Video Processing Demo'),
-        StringStruct(u'LegalCopyright', u'© Gloud Ltd. All rights reserved.'),
-        StringStruct(u'OriginalFilename', u'demo.exe'),
-        StringStruct(u'ProductName', u'Gloud Video Processing Demo'),
+        StringStruct(u'InternalName', u'Video Processing Demo'),
+        StringStruct(u'LegalCopyright', u'© iPanda Ltd. All rights reserved.'),
+        StringStruct(u'OriginalFilename', u'main.exe'),
+        StringStruct(u'ProductName', u'Video Processing Demo'),
         StringStruct(u'ProductVersion', u'0.01')])
       ]), 
     VarFileInfo([VarStruct(u'Translation', [2052, 1200])])

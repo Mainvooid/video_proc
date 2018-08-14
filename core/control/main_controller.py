@@ -28,6 +28,8 @@ class Window(QMainWindow, Ui_MainWindow):
         super(Window, self).__init__()
         self._initUi()
 
+
+
     def _initUi(self):
         # 初始化UI（视图）
         self.setupUi(self)
@@ -36,4 +38,6 @@ class Window(QMainWindow, Ui_MainWindow):
     def _initConnect(self):
         # 调用自定义信号和槽函数类（模型）
         self.model = MainModel(view=self)
+
+
 

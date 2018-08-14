@@ -33,4 +33,4 @@ console_handler.formatter = formatter  # 也可以直接给formatter赋值
 logger.addHandler(console_handler)
 
 # 指定日志的最低输出级别，默认为WARN级别
-# logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.DEBUG)

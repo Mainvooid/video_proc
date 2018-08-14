@@ -14,15 +14,12 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>视频摘要</string>
+   <string>视频摘要系统</string>
   </property>
   <property name="windowIcon">
    <iconset>
     <normalon>:/picture/res/main.ico</normalon>
    </iconset>
-  </property>
-  <property name="windowFilePath">
-   <string/>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
@@ -50,8 +47,7 @@
     <property name="title">
      <string>视图(&amp;V)</string>
     </property>
-    <addaction name="action_view_video"/>
-    <addaction name="action_view_settings"/>
+    <addaction name="action_view_restore"/>
    </widget>
    <widget class="QMenu" name="menu_help">
     <property name="title">
@@ -166,6 +162,14 @@
         <bool>true</bool>
        </property>
        <widget class="QWidget" name="scrollAreaContents_settings">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>646</width>
+          <height>597</height>
+         </rect>
+        </property>
         <property name="minimumSize">
          <size>
           <width>646</width>
@@ -326,6 +330,9 @@
             </item>
             <item row="3" column="0">
              <widget class="QLabel" name="label_foreproc">
+              <property name="toolTip">
+               <string>前景处理主要为降噪</string>
+              </property>
               <property name="text">
                <string>开启前景处理：</string>
               </property>
@@ -343,6 +350,9 @@
             </item>
             <item row="4" column="0">
              <widget class="QLabel" name="label_history">
+              <property name="toolTip">
+               <string>用于学习背景的帧数</string>
+              </property>
               <property name="text">
                <string>背景参考历史帧数：</string>
               </property>
@@ -360,6 +370,9 @@
             </item>
             <item row="5" column="0">
              <widget class="QLabel" name="label_threshold">
+              <property name="toolTip">
+               <string>用于判断当前像素是前景还是背景</string>
+              </property>
               <property name="text">
                <string>运动检测方差阈值：</string>
               </property>
@@ -377,6 +390,9 @@
             </item>
             <item row="6" column="0">
              <widget class="QLabel" name="label_area">
+              <property name="toolTip">
+               <string>检测运动面积不小于指定值</string>
+              </property>
               <property name="text">
                <string>运动检测面积：</string>
               </property>
@@ -417,6 +433,9 @@
             </item>
             <item row="8" column="0">
              <widget class="QLabel" name="label_blursize">
+              <property name="toolTip">
+               <string>用于前景处理的滤波核尺寸</string>
+              </property>
               <property name="text">
                <string>前景滤波核尺寸：</string>
               </property>
@@ -430,6 +449,9 @@
             </item>
             <item row="9" column="0">
              <widget class="QLabel" name="label_erodeshape">
+              <property name="toolTip">
+               <string>用于前景处理中的形态学开运算降噪</string>
+              </property>
               <property name="text">
                <string>腐蚀/膨胀核尺寸：</string>
               </property>
@@ -440,6 +462,9 @@
             </item>
             <item row="9" column="1">
              <widget class="QComboBox" name="cBox_erodeshape">
+              <property name="toolTip">
+               <string>用于前景处理的形态学开运算核尺寸</string>
+              </property>
               <item>
                <property name="text">
                 <string>(3,3)</string>
@@ -474,6 +499,9 @@
             </item>
             <item row="10" column="0">
              <widget class="QLabel" name="label_interruptframes">
+              <property name="toolTip">
+               <string>允许指定帧内未检测到运动的帧被摘要</string>
+              </property>
               <property name="text">
                <string>允许的不连续帧数：</string>
               </property>
@@ -505,7 +533,7 @@
             <item>
              <widget class="QPushButton" name="pBtn_getBackground">
               <property name="toolTip">
-               <string>刚开始会按照参考帧数更新一次背景，</string>
+               <string>按指定帧数更新背景</string>
               </property>
               <property name="text">
                <string>更新背景</string>
@@ -597,14 +625,12 @@
     <string>Ctrl+P</string>
    </property>
   </action>
-  <action name="action_view_video">
+  <action name="action_view_restore">
    <property name="text">
-    <string>视频</string>
+    <string>重置视图</string>
    </property>
-  </action>
-  <action name="action_view_settings">
-   <property name="text">
-    <string>设置</string>
+   <property name="toolTip">
+    <string>重置视图</string>
    </property>
   </action>
  </widget>

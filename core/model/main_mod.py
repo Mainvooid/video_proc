@@ -13,18 +13,13 @@ main的model模块
 """
 import cv2
 import os.path as osp
-from PyQt5 import QtGui
-from PyQt5 import QtCore
-from PyQt5.QtCore import QObject
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QFileDialog
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtGui import QImage
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtCore import QObject, pyqtSignal, Qt, QSettings
+from PyQt5.QtGui import QImage, QCursor, QPixmap
+from PyQt5.QtWidgets import QApplication, QFileDialog
 from easydict import EasyDict
 
 import init_path
-import proc_thread
+from core.model import proc_thread
 from core.control import settings
 from core.control.logger import *
 
@@ -34,15 +29,19 @@ class MainModel(QObject):
     信号与槽函数类
     """
     proc_finish_signal = pyqtSignal(float)
-    progress_signal = pyqtSignal(int,float)
+    progress_signal = pyqtSignal(int, float)
     frame_signal = pyqtSignal(object)
     view_refresh_signal = pyqtSignal()
+    back_ready_signal=pyqtSignal()
 
     # get_background_success = pyqtSignal()
 
     def __init__(self, view):
         super(MainModel, self).__init__()
         self.view = view
+        # 缓存窗口状态
+        path = osp.join(init_path.project_dir, "conf/window_status.ini")
+        self.window_status = QSettings(path, QSettings.IniFormat)
 
         # 缓存路径
         self._fname_temp = "../data"
@@ -61,10 +60,7 @@ class MainModel(QObject):
         self.view.pBtn_getBackground.clicked.connect(self.on_pBtn_getBackground_clicked)
         self.view.pBtn_showBackground.clicked.connect(self.on_pBtn_showBackground_clicked)
         self.view.action_stop.triggered.connect(self.on_action_stop_triggered)
-        self.view.action_view_video.triggered.connect(self.on_action_view_video_triggered)
-        self.view.action_view_settings.triggered.connect(self.on_action_view_settings_triggered)
-
-        # todo: 添加视图控制,且应根据更新项更新而不是统一更新
+        self.view.action_view_restore.triggered.connect(self.on_action_view_restore_triggered)
 
         # 界面及参数更新信号
         self.view.cBox_shadow.stateChanged.connect(self.on_var_change)
@@ -82,6 +78,7 @@ class MainModel(QObject):
         self.progress_signal.connect(self.on_progress_signal_refresh)
         self.frame_signal.connect(self.on_frame_signal_refresh)
         self.view_refresh_signal.connect(self.on_view_refresh_signal_triggered)
+        self.back_ready_signal.connect(self.on_back_ready_signal_triggered)
 
         # self.get_background_success.connect(self.on_get_background_success_triggered)
 
@@ -102,8 +99,13 @@ class MainModel(QObject):
         self.view.cBox_erodeshape.setCurrentIndex(self.cfg.DEFAULT.ERODE_SHAPE)
         self.view.sBox_undetframes.setValue(self.cfg.DEFAULT.UN_DET_SIZE)
 
+        self.view.pBtn_getBackground.setEnabled(False)
+
+        # 保存视图初始状态
+        self.window_status.setValue("window_status", self.view.saveState())
+
     def on_pBtn_getFile_clicked(self):
-        # todo: 可以开启多文件选择，选择的文件通过多线程进一步处理
+        # todo: 可以开启多文件选择，选择的文件通过多进程进一步处理
 
         fname, ftype = QFileDialog.getOpenFileName(self.view, "选取文件", self._fname_temp,
                                                    "Video Files(*.mp4;*.avi;*.wmv;*.rmvb;*.flv;*.mpg;*.rm;*.mkv);;All Files(*.*)")
@@ -133,11 +135,11 @@ class MainModel(QObject):
 
         # 鼠标指针状态变化
         if bool == False:
-            self.view.dockWidgetContents_frame.setCursor(QtGui.QCursor(QtCore.Qt.BusyCursor))
-            self.view.dockWidget_settings.setCursor(QtGui.QCursor(QtCore.Qt.BusyCursor))
+            self.view.dockWidgetContents_frame.setCursor(QCursor(Qt.BusyCursor))
+            self.view.dockWidget_settings.setCursor(QCursor(Qt.BusyCursor))
         else:
-            self.view.dockWidgetContents_frame.setCursor(QtGui.QCursor(QtCore.Qt.ArrowCursor))
-            self.view.dockWidget_settings.setCursor(QtGui.QCursor(QtCore.Qt.ArrowCursor))
+            self.view.dockWidgetContents_frame.setCursor(QCursor(Qt.ArrowCursor))
+            self.view.dockWidget_settings.setCursor(QCursor(Qt.ArrowCursor))
 
     def on_action_run_triggered(self):
         if self.view.action_stop.isEnabled():
@@ -181,10 +183,12 @@ class MainModel(QObject):
                                 undetsize=self.view.sBox_undetframes.value())
 
             self.on_action_triggered_view_enabled(False)
+            self.view.pBtn_getBackground.setEnabled(True)
             self.thread.start()
             self.view.statusbar.showMessage("开始处理！", 3000)
             logger.debug("开始处理")
         else:
+            self.view.pBtn_getBackground.setEnabled(False)
             self.view.action_run.setEnabled(True)
             self.view.action_pause.setEnabled(False)
             self.view.action_stop.setEnabled(False)
@@ -192,10 +196,11 @@ class MainModel(QObject):
             logger.exception("Error，参数错误")
 
     def on_action_pause_triggered(self):
-
+        # todo，暂停时参数可修改（此处设置UI更新）
+        self.view.pBtn_getBackground.setEnabled(True)
         if self.thread._isNotPause.isSet():
             self.thread.pause()
-            self.on_action_triggered_view_enabled(True)
+            self.on_action_triggered_view_enabled(False)
             self.view.action_run.setEnabled(True)
             self.view.action_pause.setEnabled(False)
             self.view.action_stop.setEnabled(True)
@@ -210,6 +215,7 @@ class MainModel(QObject):
     def on_action_stop_triggered(self):
         if self.thread.isAlive():
             self.on_action_triggered_view_enabled(True)
+            self.view.pBtn_getBackground.setEnabled(False)
             self.view.action_run.setEnabled(True)
             self.view.action_pause.setEnabled(False)
             self.view.action_stop.setEnabled(False)
@@ -272,8 +278,12 @@ class MainModel(QObject):
         try:
             self.thread.setLearningRate(-1)
         except:
+            self.view.statusbar.showMessage("无法设置背景更新!",3000)
             logger.exception("无法设置背景更新!")
         else:
+            self.view.pBtn_getBackground.setText("更新背景(Start)")
+            self.view.pBtn_showBackground.setText("显示背景图片")
+            self.view.statusbar.showMessage("重启背景更新！（参考历史帧数：{}）".format(self.view.sBox_history.value()), 3000)
             logger.debug("重新开始背景更新")
         # if self.view.tabWidget.currentIndex() == 0:
         #     self.input = self.view.lineEdit_videoFile.displayText()
@@ -297,25 +307,25 @@ class MainModel(QObject):
 
     def on_pBtn_showBackground_clicked(self):
         logger.debug("显示背景图片")
-        back_img_path = osp.join(init_path.project_dir, "data/background.jpg")
+        back_img_path = osp.join(init_path.project_dir, "data\\background.jpg")
         try:
             background = cv2.imread(back_img_path)
             background = cv2.resize(background, None, fx=0.5, fy=0.5)
             cv2.imshow("Background", background)
         except:
+            self.view.statusbar.showMessage("{},图片不存在或无法打开图片！".format(back_img_path),3000)
             logger.exception("图片不存在或无法打开图片！")
         else:
+            self.view.statusbar.showMessage("成功打开背景图片！{}".format(back_img_path), 3000)
             logger.debug("成功打开背景图片")
 
-    def on_action_view_video_triggered(self):
-        # todo:视图布局位置恢复
-        self.view.dockWidget_frame.setVisible(True)
-
-    def on_action_view_settings_triggered(self):
-        # todo:视图布局位置恢复
-        self.view.dockWidget_settings.setVisible(True)
+    def on_action_view_restore_triggered(self):
+        # 重置视图
+        self.view.restoreState(self.window_status.value("window_status"))
 
     def on_var_change(self):
+        # todo，线程暂停时参数可修改
+
         # 获取参数设置
         logger.debug("获取自定义参数")
         self.cfg.CUSTOM.DET_SHADOW_FLAG = self.view.cBox_shadow.checkState()
@@ -349,29 +359,36 @@ class MainModel(QObject):
         self.view.action_stop.setEnabled(False)
         self.view.statusbar.showMessage("处理完成！帧平均处理用时：{:.2f} ms".format(average_time), 1000000)
 
-    def on_progress_signal_refresh(self, progress_value,frame_proc_time):
+    def on_progress_signal_refresh(self, progress_value, frame_proc_time):
         # 接收工作线程的进度信号与帧处理时间并显示
-        self.view.statusbar.showMessage("处理中: {} % , 当前帧用时：{:.2f} ms".format(progress_value,frame_proc_time), 1000000)
+        self.view.statusbar.showMessage("处理中: {} % , 当前帧用时：{:.2f} ms".format(progress_value, frame_proc_time), 1000000)
         self.view.progressBar.setValue(progress_value)
 
-    def on_frame_signal_refresh(self,frame):
+    def on_frame_signal_refresh(self, frame):
         # 接收工作线程的帧信号并显示
 
         # 画面比例调整
-        fx = 960/frame.shape[1]
-        fy = 540/frame.shape[0]
+        fx = 960 / frame.shape[1]
+        fy = 540 / frame.shape[0]
 
         # 缩放
         frame = cv2.resize(frame, None, fx=fx, fy=fy)
         # 转为QImage，且BGR2RGB
         image = QImage(frame, frame.shape[1], frame.shape[0], frame.shape[1] * 3,
-                        QImage.Format_RGB888).rgbSwapped()
+                       QImage.Format_RGB888).rgbSwapped()
         # 刷新
         self.view.label_showFrame.setPixmap(QPixmap(image))
 
     def on_view_refresh_signal_triggered(self):
         # 接收工作线程的view刷新信号并刷新
         QApplication.processEvents()
+
+    def on_back_ready_signal_triggered(self):
+        # UI状态更新
+        self.view.pBtn_showBackground.setText("显示背景图片(Ready)")
+        if self.view.pBtn_getBackground.text()=="更新背景(Start)":
+            self.view.pBtn_getBackground.setText("更新背景(Finish)")
+
 
     def on_get_background_success_triggered(self):
         logger.debug("背景提取完成，收尾处理UI状态")
