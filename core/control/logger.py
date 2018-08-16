@@ -14,6 +14,8 @@ from __future__ import unicode_literals
 import logging
 import sys
 
+from core.control import settings
+
 # 获取logger实例，如果参数为空则返回root logger
 logger = logging.getLogger()
 
@@ -33,4 +35,5 @@ console_handler.formatter = formatter  # 也可以直接给formatter赋值
 logger.addHandler(console_handler)
 
 # 指定日志的最低输出级别，默认为WARN级别
-logger.setLevel(logging.DEBUG)
+if settings.isDEBUG:
+    logger.setLevel(logging.DEBUG)

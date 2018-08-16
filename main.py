@@ -18,6 +18,7 @@ from PyQt5.QtWidgets import QApplication
 import core.control.main_controller as control
 
 if __name__ == '__main__':
+
     # 创建应用程序
     app = QApplication(sys.argv)
     # app.setOrganizationName("Glound")

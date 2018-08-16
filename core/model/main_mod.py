@@ -15,13 +15,14 @@ import cv2
 import os.path as osp
 from PyQt5.QtCore import QObject, pyqtSignal, Qt, QSettings
 from PyQt5.QtGui import QImage, QCursor, QPixmap
-from PyQt5.QtWidgets import QApplication, QFileDialog
+from PyQt5.QtWidgets import QApplication, QFileDialog,QDialog
 from easydict import EasyDict
 
 import init_path
 from core.model import proc_thread
 from core.control import settings
 from core.control.logger import *
+from core.view.ui_dialog import *
 
 
 class MainModel(QObject):
@@ -39,6 +40,7 @@ class MainModel(QObject):
     def __init__(self, view):
         super(MainModel, self).__init__()
         self.view = view
+
         # 缓存窗口状态
         path = osp.join(init_path.project_dir, "conf/window_status.ini")
         self.window_status = QSettings(path, QSettings.IniFormat)
@@ -61,6 +63,7 @@ class MainModel(QObject):
         self.view.pBtn_showBackground.clicked.connect(self.on_pBtn_showBackground_clicked)
         self.view.action_stop.triggered.connect(self.on_action_stop_triggered)
         self.view.action_view_restore.triggered.connect(self.on_action_view_restore_triggered)
+        self.view.action_about.triggered.connect(self.on_action_about_triggered)
 
         # 界面及参数更新信号
         self.view.cBox_shadow.stateChanged.connect(self.on_var_change)
@@ -72,6 +75,9 @@ class MainModel(QObject):
         self.view.sBox_blursize.valueChanged.connect(self.on_var_change)
         self.view.cBox_erodeshape.currentIndexChanged.connect(self.on_var_change)
         self.view.sBox_undetframes.valueChanged.connect(self.on_var_change)
+        self.view.cBox_autoback.stateChanged.connect(self.on_var_change)
+        self.view.dsBox_shadowvar.valueChanged.connect(self.on_var_change)
+
 
         # 自定义信号与槽
         self.proc_finish_signal.connect(self.on_proc_finish_signal_triggered)
@@ -80,24 +86,24 @@ class MainModel(QObject):
         self.view_refresh_signal.connect(self.on_view_refresh_signal_triggered)
         self.back_ready_signal.connect(self.on_back_ready_signal_triggered)
 
-        # self.get_background_success.connect(self.on_get_background_success_triggered)
-
     def _init_scene_args(self):
         # 初始化设置界面
 
         # 从外部配置文件读取
         self.cfg = EasyDict(settings.read_cfg())
 
-        # 显示设置参数
-        self.view.cBox_shadow.setChecked(self.cfg.DEFAULT.HAS_DET_SHADOW)
-        self.view.cBox_foreproc.setChecked(self.cfg.DEFAULT.HAS_FORE_PROC)
+        # 显示设置参数,参数详情看UI或settings
         self.view.sBox_history.setValue(self.cfg.DEFAULT.HISTORY)
         self.view.sBox_threshold.setValue(self.cfg.DEFAULT.THRESHOLD)
         self.view.sBox_area.setValue(self.cfg.DEFAULT.AREA_SIZE)
         self.view.dsBox_ratio.setValue(self.cfg.DEFAULT.BACK_RATIO)
-        self.view.sBox_blursize.setValue(self.cfg.DEFAULT.BLUR_SIZE)
-        self.view.cBox_erodeshape.setCurrentIndex(self.cfg.DEFAULT.ERODE_SHAPE)
         self.view.sBox_undetframes.setValue(self.cfg.DEFAULT.UN_DET_SIZE)
+        self.view.sBox_blursize.setValue(self.cfg.DEFAULT.BLUR_SIZE)
+        self.view.cBox_autoback.setChecked(self.cfg.DEFAULT.IS_AUTO_BACK)
+        self.view.cBox_shadow.setChecked(self.cfg.DEFAULT.HAS_DET_SHADOW)
+        self.view.dsBox_shadowvar.setValue(self.cfg.DEFAULT.DET_SHADOW_VAR)
+        self.view.cBox_foreproc.setChecked(self.cfg.DEFAULT.HAS_FORE_PROC)
+        self.view.cBox_erodeshape.setCurrentIndex(self.cfg.DEFAULT.ERODE_SHAPE)
 
         self.view.pBtn_getBackground.setEnabled(False)
 
@@ -105,7 +111,7 @@ class MainModel(QObject):
         self.window_status.setValue("window_status", self.view.saveState())
 
     def on_pBtn_getFile_clicked(self):
-        # todo: 可以开启多文件选择，选择的文件通过多进程进一步处理
+        # TODO 可以开启多文件选择，选择的文件通过多进程进一步处理
 
         fname, ftype = QFileDialog.getOpenFileName(self.view, "选取文件", self._fname_temp,
                                                    "Video Files(*.mp4;*.avi;*.wmv;*.rmvb;*.flv;*.mpg;*.rm;*.mkv);;All Files(*.*)")
@@ -121,13 +127,6 @@ class MainModel(QObject):
 
     def on_action_triggered_view_enabled(self, bool):
         # 视图可编辑状态变化
-
-        # todo:优化 更新背景按钮 的状态变化
-        """
-        更新背景按钮:未开始处理时False,开始处理后为True
-        （finish）显示背景图片：做异常处理，只要图片存在随时可以显示
-
-        """
 
         self.view.tabWidget.setEnabled(bool)
         self.view.widget_set.setEnabled(bool)
@@ -158,9 +157,11 @@ class MainModel(QObject):
         self.view.action_stop.setEnabled(True)
 
         if self.view.tabWidget.currentIndex() == 0:
+            # 文件模式
             self.input = self.view.lineEdit_videoFile.displayText()
             self.output_dir_name = self.view.lineEdit_saveDir.displayText()
         elif self.view.tabWidget.currentIndex() == 1:
+            # 摄像模式
             self.input = self.view.sBox_cam_num.value()
             self.output_dir_name = None
         else:
@@ -171,19 +172,23 @@ class MainModel(QObject):
             self.thread = proc_thread.MotionDetThread(model=self)
             self.thread.setDaemon(True)  # 设置守护线程，以在主线程退出后退出
             self.thread.setDirs(self.input, self.output_dir_name)
-
             self.thread.setArgs(history=self.view.sBox_history.value(),
                                 threshold=self.view.sBox_threshold.value(),
-                                detshadow=self.view.cBox_shadow.checkState(),
-                                backratio=self.view.dsBox_ratio.value(),
-                                blursize=self.view.sBox_blursize.value(),
-                                foreproc=self.view.cBox_foreproc.checkState(),
-                                erodeshape=tuple(eval(self.view.cBox_erodeshape.currentText())),
-                                areasize=self.view.sBox_area.value(),
-                                undetsize=self.view.sBox_undetframes.value())
+                                has_det_shadow=self.view.cBox_shadow.checkState(),
+                                background_ratio=self.view.dsBox_ratio.value(),
+                                blur_size=self.view.sBox_blursize.value(),
+                                fore_proc=self.view.cBox_foreproc.checkState(),
+                                erode_shape=tuple(eval(self.view.cBox_erodeshape.currentText())),
+                                area_size=self.view.sBox_area.value(),
+                                undetected_size=self.view.sBox_undetframes.value(),
+                                is_auto_back=self.view.cBox_autoback.checkState(),
+                                det_shadow_var=self.view.dsBox_shadowvar.value())
 
             self.on_action_triggered_view_enabled(False)
-            self.view.pBtn_getBackground.setEnabled(True)
+            if self.view.cBox_autoback.checkState() == 0:
+                self.view.pBtn_getBackground.setEnabled(True)
+            else:
+                self.view.pBtn_getBackground.setEnabled(False)
             self.thread.start()
             self.view.statusbar.showMessage("开始处理！", 3000)
             logger.debug("开始处理")
@@ -196,8 +201,11 @@ class MainModel(QObject):
             logger.exception("Error，参数错误")
 
     def on_action_pause_triggered(self):
-        # todo，暂停时参数可修改（此处设置UI更新）
-        self.view.pBtn_getBackground.setEnabled(True)
+        # TODO 暂停时参数可修改（此处设置UI更新）
+        logger.debug("准备暂停")
+        if self.view.cBox_autoback.checkState()==0:
+            self.view.pBtn_getBackground.setEnabled(True)
+
         if self.thread._isNotPause.isSet():
             self.thread.pause()
             self.on_action_triggered_view_enabled(False)
@@ -213,9 +221,11 @@ class MainModel(QObject):
             logger.debug("线程已恢复")
 
     def on_action_stop_triggered(self):
+        logger.debug("准备停止")
         if self.thread.isAlive():
             self.on_action_triggered_view_enabled(True)
-            self.view.pBtn_getBackground.setEnabled(False)
+            if self.view.cBox_autoback.checkState()==0:
+                self.view.pBtn_getBackground.setEnabled(True)
             self.view.action_run.setEnabled(True)
             self.view.action_pause.setEnabled(False)
             self.view.action_stop.setEnabled(False)
@@ -239,6 +249,8 @@ class MainModel(QObject):
         self.view.sBox_blursize.blockSignals(True)
         self.view.cBox_erodeshape.blockSignals(True)
         self.view.sBox_undetframes.blockSignals(True)
+        self.view.cBox_autoback.blockSignals(True)
+        self.view.dsBox_shadowvar.blockSignals(True)
 
         if self.view.cBox_scene.currentText() == "默认":
             # 显示参数设置
@@ -251,6 +263,8 @@ class MainModel(QObject):
             self.view.sBox_blursize.setValue(self.cfg.DEFAULT.BLUR_SIZE)
             self.view.cBox_erodeshape.setCurrentIndex(self.cfg.DEFAULT.ERODE_SHAPE)
             self.view.sBox_undetframes.setValue(self.cfg.DEFAULT.UN_DET_SIZE)
+            self.view.cBox_autoback.setChecked(self.cfg.DEFAULT.IS_AUTO_BACK)
+            self.view.dsBox_shadowvar.setValue(self.cfg.DEFAULT.DET_SHADOW_VAR)
         else:
             # 显示参数设置
             self.view.cBox_shadow.setChecked(self.cfg.CUSTOM.HAS_DET_SHADOW)
@@ -262,6 +276,8 @@ class MainModel(QObject):
             self.view.sBox_blursize.setValue(self.cfg.CUSTOM.BLUR_SIZE)
             self.view.cBox_erodeshape.setCurrentIndex(self.cfg.CUSTOM.ERODE_SHAPE)
             self.view.sBox_undetframes.setValue(self.cfg.CUSTOM.UN_DET_SIZE)
+            self.view.cBox_autoback.setChecked(self.cfg.CUSTOM.IS_AUTO_BACK)
+            self.view.dsBox_shadowvar.setValue(self.cfg.CUSTOM.DET_SHADOW_VAR)
 
         self.view.cBox_shadow.blockSignals(False)
         self.view.cBox_foreproc.blockSignals(False)
@@ -272,9 +288,11 @@ class MainModel(QObject):
         self.view.sBox_blursize.blockSignals(False)
         self.view.cBox_erodeshape.blockSignals(False)
         self.view.sBox_undetframes.blockSignals(False)
+        self.view.cBox_autoback.blockSignals(False)
+        self.view.dsBox_shadowvar.blockSignals(False)
 
     def on_pBtn_getBackground_clicked(self):
-        # 设置背景更新，点击将重新开始背景学习的循环
+        # 设置手动背景更新，点击将重新开始背景学习的循环
         try:
             self.thread.setLearningRate(-1)
         except:
@@ -285,25 +303,6 @@ class MainModel(QObject):
             self.view.pBtn_showBackground.setText("显示背景图片")
             self.view.statusbar.showMessage("重启背景更新！（参考历史帧数：{}）".format(self.view.sBox_history.value()), 3000)
             logger.debug("重新开始背景更新")
-        # if self.view.tabWidget.currentIndex() == 0:
-        #     self.input = self.view.lineEdit_videoFile.displayText()
-        # elif self.view.tabWidget.currentIndex() == 1:
-        #     self.input = self.view.sBox_cam_num.value()
-        # else:
-        #     self.input = 0
-        #
-        # self.GetBackgroundThread = proc_thread.GetBackgroundThread(model=self)
-        # self.GetBackgroundThread.setDaemon(True)  # 设置守护线程，以在主线程退出后退出
-        # self.GetBackgroundThread.setInput(self.input)
-        # self.GetBackgroundThread.setArgs(history=self.view.sBox_history.value(),
-        #                     threshold=self.view.sBox_threshold.value(),
-        #                     detshadow=self.view.cBox_shadow.checkState(),
-        #                     backratio=self.view.dsBox_ratio.value())
-        #
-        # self._on_action_triggered_view_enabled(False)
-        # self.view.statusbar.showMessage("开始提取背景！", 3000)
-        # logger.debug("开始提取背景")
-        # self.GetBackgroundThread.start()
 
     def on_pBtn_showBackground_clicked(self):
         logger.debug("显示背景图片")
@@ -323,8 +322,18 @@ class MainModel(QObject):
         # 重置视图
         self.view.restoreState(self.window_status.value("window_status"))
 
+    def on_action_about_triggered(self):
+        # 显示关于页
+        self.view.dialog=QDialog()
+        about=Ui_Dialog()
+        about.setupUi(self.view.dialog)
+        # 只保留关闭按钮
+        self.view.dialog.setWindowFlags(Qt.WindowCloseButtonHint)
+        # 使用exec方法显示
+        self.view.dialog.exec_()
+
     def on_var_change(self):
-        # todo，线程暂停时参数可修改
+        # TODO 线程暂停时参数可修改
 
         # 获取参数设置
         logger.debug("获取自定义参数")
@@ -337,6 +346,8 @@ class MainModel(QObject):
         self.cfg.CUSTOM.BLUR_SIZE = self.view.sBox_blursize.value()
         self.cfg.CUSTOM.ERODE_SHAPE = self.view.cBox_erodeshape.currentIndex()
         self.cfg.CUSTOM.UN_DET_SIZE = self.view.sBox_undetframes.value()
+        self.cfg.CUSTOM.IS_AUTO_BACK=self.view.cBox_autoback.checkState()
+        self.cfg.CUSTOM.DET_SHADOW_VAR=self.view.dsBox_shadowvar.value()
 
         # 保存到文件
         settings.write_cfg(self.cfg)
@@ -365,7 +376,7 @@ class MainModel(QObject):
         self.view.progressBar.setValue(progress_value)
 
     def on_frame_signal_refresh(self, frame):
-        # 接收工作线程的帧信号并显示
+        # 接收工作线程的帧图像并显示
 
         # 画面比例调整
         fx = 960 / frame.shape[1]
@@ -376,7 +387,7 @@ class MainModel(QObject):
         # 转为QImage，且BGR2RGB
         image = QImage(frame, frame.shape[1], frame.shape[0], frame.shape[1] * 3,
                        QImage.Format_RGB888).rgbSwapped()
-        # 刷新
+        # 显示
         self.view.label_showFrame.setPixmap(QPixmap(image))
 
     def on_view_refresh_signal_triggered(self):
@@ -384,13 +395,7 @@ class MainModel(QObject):
         QApplication.processEvents()
 
     def on_back_ready_signal_triggered(self):
-        # UI状态更新
+        # 背景图片已保存，UI状态更新
         self.view.pBtn_showBackground.setText("显示背景图片(Ready)")
         if self.view.pBtn_getBackground.text()=="更新背景(Start)":
             self.view.pBtn_getBackground.setText("更新背景(Finish)")
-
-
-    def on_get_background_success_triggered(self):
-        logger.debug("背景提取完成，收尾处理UI状态")
-        self.on_action_triggered_view_enabled(True)
-        self.view.statusbar.showMessage("背景更新完成！", 1000000)
