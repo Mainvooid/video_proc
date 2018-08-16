@@ -1,0 +1,30 @@
+{
+    "CUSTOM": {
+        "AREA_SIZE": 50,
+        "BACK_RATIO": 0.85,
+        "BLUR_SIZE": 5,
+        "DET_SHADOW_FLAG": 2,
+        "DET_SHADOW_VAR": 0.8,
+        "ERODE_SHAPE": 2,
+        "FORE_PROC_FLAG": 0,
+        "HAS_DET_SHADOW": 2,
+        "HAS_FORE_PROC": 0,
+        "HISTORY": 600,
+        "IS_AUTO_BACK": 2,
+        "THRESHOLD": 100,
+        "UN_DET_SIZE": 10
+    },
+    "DEFAULT": {
+        "AREA_SIZE": 50,
+        "BACK_RATIO": 0.85,
+        "BLUR_SIZE": 5,
+        "DET_SHADOW_VAR": 0.8,
+        "ERODE_SHAPE": 2,
+        "HAS_DET_SHADOW": 2,
+        "HAS_FORE_PROC": 0,
+        "HISTORY": 600,
+        "IS_AUTO_BACK": 0,
+        "THRESHOLD": 100,
+        "UN_DET_SIZE": 10
+    }
+}
