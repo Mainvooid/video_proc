@@ -40,10 +40,10 @@ class Ui_Dialog(object):
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
         Dialog.setWindowTitle(_translate("Dialog", "关于"))
-        self.label.setText(_translate("Dialog", "版本： 0.1.0"))
+        self.label.setText(_translate("Dialog", "版本： 0.1.0(Demo)"))
         self.label_2.setText(_translate("Dialog", "架构： x64"))
-        self.label_3.setText(_translate("Dialog", "构建时间： 2018-08-20"))
+        self.label_3.setText(_translate("Dialog", "构建时间： 2018-08-21"))
         self.label_6.setText(_translate("Dialog", "Python: 3.6.6"))
         self.label_4.setText(_translate("Dialog", "Email: guobao.v@gmail.com"))
 
-
+import resource_rc

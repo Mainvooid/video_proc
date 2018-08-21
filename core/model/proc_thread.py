@@ -31,7 +31,7 @@ class MotionDetThread(threading.Thread):
 
     def __init__(self, model):
         super(MotionDetThread, self).__init__()
-        # 线程标志
+        # 线程控制标志
         self._isRunning = threading.Event()  # 用于停止线程
         self._isRunning.set()  # 设置为True
         self._isNotPause = threading.Event()  # 用于暂停线程
@@ -49,6 +49,7 @@ class MotionDetThread(threading.Thread):
         self.input = input
         self.output_dir = output_dir_name
 
+    # TODO 使用*args 和 **kwargs替换
     def setArgs(self, history, threshold, area_size, background_ratio, undetected_size, blur_size, is_auto_back,
                 has_det_shadow, det_shadow_var, fore_proc, erode_shape):
         self.mog2_history = history
@@ -90,6 +91,9 @@ class MotionDetThread(threading.Thread):
         mog2 = cv2.createBackgroundSubtractorMOG2(history=self.mog2_history,
                                                   varThreshold=self.mog2_varThreshold,
                                                   detectShadows=self.DETECT_SHADOWS_FLAG)
+        # KNN 综合速度快20-30%，但是精度相对低一些，需要调试
+        # self.knn_history=100
+        # mog2=cv2.createBackgroundSubtractorKNN(history=self.knn_history,detectShadows=True)
 
         # 设置背景比率，取太高多背景模型叠加会模糊（类似滤波），取太低细节会不够（类似腐蚀）
         mog2.setBackgroundRatio(ratio=self.background_ratio)
@@ -109,6 +113,7 @@ class MotionDetThread(threading.Thread):
         # 读帧并处理
         frameNo = 0  # 第几帧
         learningFrameNo = 0  # 记录背景更新帧数
+        isFirstLearn = True  # 是否是第一次更新背景
         motion_start, motion_count = 0, 0  # 运动帧计数
 
         if isinstance(self.input, int):
@@ -135,7 +140,7 @@ class MotionDetThread(threading.Thread):
 
             # 视频大小
             frame_size = (
-            int(self.capture.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.capture.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+                int(self.capture.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.capture.get(cv2.CAP_PROP_FRAME_HEIGHT)))
 
             # 视频保存路径
             output_name = osp.splitext(osp.basename(self.input))[0]
@@ -155,9 +160,14 @@ class MotionDetThread(threading.Thread):
             if (self._isRunning.isSet() == False) or (total_frame_num == frameNo):
                 break
 
-            if learningFrameNo == self.mog2_history:
+            if (isFirstLearn or self.AUTO_BACK_FLAG) and learningFrameNo == self.mog2_history:
+                # 保存第一次产生的背景，保存自动更新背景第一次产生背景之后的背景（非自动更新就不保存）
+
                 # 重置背景更新帧计数
                 learningFrameNo = 0
+
+                # 重置标识
+                isFirstLearn = False
 
                 # 若自动背景更新未开启则停止背景更新
                 if self.AUTO_BACK_FLAG == False:
@@ -186,6 +196,10 @@ class MotionDetThread(threading.Thread):
             frameNo += 1
             learningFrameNo += 1
 
+            # # 2层降采样可以提高20%效率，写入视频有BUG
+            # frame=cv2.pyrDown(frame)
+            # frame = cv2.pyrDown(frame)
+
             # 混合高斯建模获取前景与背景
             try:
                 rows, cols, ch = frame.shape
@@ -199,7 +213,7 @@ class MotionDetThread(threading.Thread):
             mog2.apply(image=frame, fgmask=self.foreground, learningRate=self.LearningRate)
 
             if settings.isDEBUG:
-                a0 = cv2.resize(self.foreground, None, fx=0.5, fy=0.5)
+                a0 = cv2.resize(self.foreground, None, fx=0.25, fy=0.25)
                 cv2.imshow("0 foreground", a0)
                 cv2.waitKey(1)
 
@@ -208,7 +222,7 @@ class MotionDetThread(threading.Thread):
                 self.foreground = cv2.threshold(self.foreground, 244, 255, cv2.THRESH_BINARY)[1]
 
                 if settings.isDEBUG:
-                    a1 = cv2.resize(self.foreground, None, fx=0.5, fy=0.5)
+                    a1 = cv2.resize(self.foreground, None, fx=0.25, fy=0.25)
                     cv2.imshow("1 after threshold", a1)
                     cv2.waitKey(1)
 
@@ -216,7 +230,7 @@ class MotionDetThread(threading.Thread):
             cv2.medianBlur(src=self.foreground, dst=self.foreground, ksize=self.medianBlur_ksize)
 
             if settings.isDEBUG:
-                a2 = cv2.resize(self.foreground, None, fx=0.5, fy=0.5)
+                a2 = cv2.resize(self.foreground, None, fx=0.25, fy=0.25)
                 cv2.imshow("2 after medianBlur", a2)
                 cv2.waitKey(1)
 
@@ -226,7 +240,7 @@ class MotionDetThread(threading.Thread):
                 cv2.erode(src=self.foreground, dst=self.foreground, kernel=np.ones(shape=self.e_shape, dtype=np.uint8))
 
                 if settings.isDEBUG:
-                    a3 = cv2.resize(self.foreground, None, fx=0.5, fy=0.5)
+                    a3 = cv2.resize(self.foreground, None, fx=0.25, fy=0.25)
                     cv2.imshow("3 after dilate erode", a3)
                     cv2.waitKey(1)
 
@@ -240,16 +254,29 @@ class MotionDetThread(threading.Thread):
             image, contours, hierarchy = cv2.findContours(image=self.foreground,
                                                           mode=cv2.RETR_TREE,
                                                           method=cv2.CHAIN_APPROX_SIMPLE)
+            # 下面俩步为了增强光照鲁棒性，有时候轮廓的行为像噪声，可以尝试减除
+            # TODO 提高对光照的鲁棒性，有时候轮廓的行为像噪声，可以尝试减除，或者判断当小轮廓太多时重新启用背景更新
+            for i, c in enumerate(contours):
+                # 面积太小的轮廓当成噪音
+                if cv2.contourArea(c) < self.area_size:
+                    # 上一层轮廓 绿色
+                    if (hierarchy[0][i][1] != -1 and hierarchy != []):
+                        cv2.drawContours(image=self.foreground, contours=contours, contourIdx=i, color=(0, 255, 0),
+                                         thickness=3)
 
-            # 下面俩步为了滤波，当前场景下相对一般滤波似乎更有效
-            # TODO 不需要滤掉内轮廓
-            cv2.drawContours(self.foreground, contours, -1, (0, 0, 255), 3, hierarchy=hierarchy)  # 会抵消掉上一层的轮廓
+                    # 父轮廓 黄色
+                    if (hierarchy[0][i][2] != -1 and hierarchy != []):
+                        cv2.drawContours(image=self.foreground, contours=contours, contourIdx=i, color=(0, 255, 255),
+                                         thickness=3)
+
+            # cv2.drawContours(self.foreground, contours, -1, (0, 0, 255), 1, hierarchy=hierarchy)  # 会抵消掉所有轮廓，有一定自适应去噪效果（可以增强光照鲁棒性）
 
             if settings.isDEBUG:
-                a4 = cv2.resize(self.foreground, None, fx=0.5, fy=0.5)
+                a4 = cv2.resize(self.foreground, None, fx=0.25, fy=0.25)
                 cv2.imshow("4 after drawContours", a4)
                 cv2.waitKey(1)
 
+            # 去掉轮廓本身的噪音后重新计算轮廓
             image, contours, hierarchy = cv2.findContours(image=self.foreground,
                                                           mode=cv2.RETR_TREE,
                                                           method=cv2.CHAIN_APPROX_SIMPLE)
@@ -257,43 +284,45 @@ class MotionDetThread(threading.Thread):
             # 显示轮廓
             rect = []
             metion_flag = False
+
+            # 判断当前帧是否是运动帧
             for i, c in enumerate(contours):
-
-                if settings.isDEBUG:
-                    # 下一层轮廓 蓝色
-                    if (hierarchy[0][i][0] != -1 and hierarchy != []):
-                        cv2.drawContours(frame, contours, i, (255, 0, 0), 3)
-
-                    # 上一层轮廓 绿色
-                    if (hierarchy[0][i][1] != -1 and hierarchy != []):
-                        cv2.drawContours(frame, contours, i, (0, 255, 0), 3)
-
-                    # 父轮廓 黄色
-                    if (hierarchy[0][i][2] != -1 and hierarchy != []):
-                        cv2.drawContours(frame, contours, i, (0, 255, 255), 3)
-                    # 子轮廓 红色
-                    if (hierarchy[0][i][3] != -1 and hierarchy != []):
-                        cv2.drawContours(frame, contours, i, (0, 0, 255), 3)
-
-                # if c is not None:
-                #     for a in c:
-                #         print("a[0]:",a[0])
-                #         cv2.circle(img, tuple(eval(a[0])), 2, (0, 0, 255))# 在图像中画出特征点，2是圆的半径
-                #         cv2.imshow("img",img)
-                #         cv2.waitKey(1)
-
                 # 判断轮廓面积
                 if cv2.contourArea(c) > self.area_size:
+                    # TODO 计算轮廓，判断运动帧，是否可以采用图像金字塔先降采样
                     # 判断为运动帧
                     metion_flag = True
 
                     # 包住轮廓的最小矩形的坐标（x，y为左上点坐标）
                     (x, y, w, h) = cv2.boundingRect(c)
 
+                    # 列表追加符合阈值的轮廓
                     rect.append(np.array([[x, y], [x + w, y], [x, y + h], [x + w, y + h]]))
 
-            if len(rect) == 1:
-                # 若当前帧只找到一个轮廓
+                    if settings.isDEBUG:
+                        # DEBUG模式，画出相关轮廓
+                        # TODO 不画已经被剔除的轮廓
+                        # # 下一层轮廓 蓝色
+                        # if (hierarchy[0][i][0] != -1 and hierarchy != []):
+                        #     cv2.drawContours(frame, contours, i, (255, 0, 0), 3)
+
+                        # 上一层轮廓 绿色
+                        if (hierarchy[0][i][1] != -1 and hierarchy != []):
+                            cv2.drawContours(image=frame, contours=contours, contourIdx=i, color=(0, 255, 0),
+                                             thickness=3)
+
+                        # 父轮廓 黄色
+                        if (hierarchy[0][i][2] != -1 and hierarchy != []):
+                            cv2.drawContours(image=frame, contours=contours, contourIdx=i, color=(0, 255, 255),
+                                             thickness=3)
+
+                        # # 子轮廓 红色
+                        # if (hierarchy[0][i][3] != -1 and hierarchy != []):
+                        #     cv2.drawContours(frame, contours, i, (0, 0, 255), 3)
+
+            if metion_flag == False:
+                # 若当前帧非运动帧，跳到下一帧
+                logger.debug("当前帧非运动帧")
 
                 end_time = time.time()
 
@@ -305,7 +334,7 @@ class MotionDetThread(threading.Thread):
 
                 # 跨线程发送进度和时间信号，更新UI
                 if isinstance(self.input, int):
-                    progress_value = 99
+                    progress_value = -1
                     self.model.progress_signal.emit(progress_value, frame_proc_time)
                 else:
                     progress_value = frameNo / total_frame_num * 100
@@ -315,51 +344,78 @@ class MotionDetThread(threading.Thread):
                 self.model.view_refresh_signal.emit()
 
                 continue
-            else:
-                # FIXME 总会合并为一个框
-                for j in range(len(rect)):
-                    # 寻找最小矩形区域
-                    r0 = cv2.minAreaRect(rect[0])
 
-                    # 循环中是否找到相交点
+            elif len(rect) == 1:
+                # 若当前帧只有一个轮廓
+                logger.debug("当前帧只有一个轮廓")
+                pass
+            else:
+                # 合并列表中所有相交轮廓
+
+                # 连续未相交的计数
+                unintersected_num = 0
+
+                while True:
+                    if unintersected_num >= len(rect) - 1:
+                        # 连续len-1长度内未相交判定结束
+                        break
+
+                    # 寻找最小矩形区域，返回旋转矩形：((中心点坐标)，(高宽），旋转角度)
+                    r0 = cv2.minAreaRect(rect[0])  # input numpy array or scalar
+
+                    # 循环中是否找到相交点的标记
                     isFind = False
 
+                    # 从列表第2位开始搜索直到相交
                     for k in range(1, len(rect)):
+                        # 寻找最小旋转矩形
                         rk = cv2.minAreaRect(rect[k])
 
-                        # 判断是否相交，并计算相交区域的顶点（冗余）
-                        # TODO 可能是此函数判断相交出现问题
+                        # 碰撞检测,判断是否相交，并计算相交区域的顶点（冗余）,输出左上,右下，右上,左下点坐标
                         retval, intersectingRegion = cv2.rotatedRectangleIntersection(r0, rk)
 
-                        if retval == cv2.INTERSECT_PARTIAL or cv2.INTERSECT_FULL:
-                            # 如果相交或内含，由合并点集计算最小正矩形
+                        # if True 时，以所有前景合成一个框
+                        if retval != cv2.INTERSECT_NONE:
+                            # 如果相交或内含，合并点集
                             points = np.vstack((rect[0], rect[k]))
+
+                            # 计算最小正矩形（左上角坐标+宽高）
                             (x, y, w, h) = cv2.boundingRect(points)
 
+                            # # TODO 边界处理,4个边界，因矩形框可能溢出画面，
+                            # if x < 0:
+                            #     x = 0
+                            # if y < 0:
+                            #     y = 0
+
                             # 列表元素变化
+                            rect.pop(k)
                             rect.pop(0)
-                            rect.pop(k - 1)
+
+                            # 追加合并的矩形
                             rect.append(np.array([[x, y], [x + w, y], [x, y + h], [x + w, y + h]]))
 
                             isFind = True
+                            unintersected_num = 0
+
                             break
 
                     if isFind == False:
                         # logger.debug("当前没有交或含")
 
-                        # 0位移到末尾参与后面发生可能的合并
+                        # 0位移到末尾参与后面可能发生的合并
                         rect.append(rect[0])
                         rect.pop(0)
 
-            # 画矩形框
-            for r in rect:
-                p = r.tolist()
-                (x, y) = p[0]
-                w = p[3][0] - x
-                h = p[3][1] - y
+                        # 未相交计数
+                        unintersected_num += 1
 
-                cv2.rectangle(img=self.foreground, pt1=(x, y), pt2=(x + w, y + h), color=(255, 255, 0),
-                              thickness=3)
+            # 处理合并完轮廓后，绘制矩形框
+            for r in rect:
+                temp = r.tolist()
+                (x, y) = temp[0]
+                w = temp[3][0] - x
+                h = temp[3][1] - y
                 cv2.rectangle(img=frame, pt1=(x, y), pt2=(x + w, y + h), color=(255, 255, 0), thickness=3)
 
             # 更新运动帧计数并打印
@@ -369,7 +425,6 @@ class MotionDetThread(threading.Thread):
 
                     # 在UI界面显示
                     self.model.frame_signal.emit(frame)
-
 
                     # 文件模式，写入视频
                     if not isinstance(self.input, int):
@@ -381,15 +436,16 @@ class MotionDetThread(threading.Thread):
                     # 在UI界面显示
                     self.model.frame_signal.emit(frame)
 
-
                     # 文件模式，写入视频
                     if not isinstance(self.input, int):
                         self.writer.write(frame)
 
                 else:
-                    # print("运动帧：%d-%d" % (motion_start, motion_start + motion_count))
+                    # 连续N帧内未检测到运动，重新计数运动帧
+                    logger.debug("运动帧：%d-%d" % (motion_start, motion_start + motion_count))
                     motion_start, motion_count = 0, 0
 
+            # 结束当前帧计时
             end_time = time.time()
 
             # 计算帧处理时间,s->ms
@@ -409,30 +465,38 @@ class MotionDetThread(threading.Thread):
             # 刷新页面防止卡顿
             self.model.view_refresh_signal.emit()
 
+        # 完成处理，释放相关资源
         if not isinstance(self.input, int):
             self.writer.release()
-
         self.capture.release()
+        cv2.destroyAllWindows()
 
         # 计算平均处理时间
         average_time = total_frame_time / frameNo
 
+        # 发送处理完成信号
         self.model.proc_finish_signal.emit(average_time)
+
+        logger.debug("帧平均处理时间:{}".format(average_time))
 
         if self._isRunning.isSet() == False:
             logger.debug("因为用户停止，线程退出")
         else:
             logger.debug("线程执行完成！")
+
         return 0
 
     def pause(self):
-        self._isNotPause.clear()  # 设为Flase 让线程阻塞
-
+        # 设为False 让线程阻塞
+        self._isNotPause.clear()
 
     def resume(self):
-        self._isNotPause.set()  # 设为True 停止阻塞
-
+        # 设为True 停止阻塞
+        self._isNotPause.set()
 
     def stop(self):
-        self._isNotPause.set()  # 从暂停状态恢复
-        self._isRunning.clear()  # 设置为False,停止线程
+        # 从暂停状态恢复
+        self._isNotPause.set()
+
+        # 设置为False,停止线程
+        self._isRunning.clear()

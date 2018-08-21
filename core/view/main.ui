@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1692</width>
-    <height>760</height>
+    <width>1522</width>
+    <height>769</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -22,18 +22,16 @@
    </iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout">
-    <property name="sizeConstraint">
-     <enum>QLayout::SetDefaultConstraint</enum>
-    </property>
-   </layout>
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1692</width>
+     <width>1522</width>
      <height>23</height>
     </rect>
    </property>
@@ -77,6 +75,12 @@
    <addaction name="action_stop"/>
   </widget>
   <widget class="QDockWidget" name="dockWidget_frame">
+   <property name="floating">
+    <bool>false</bool>
+   </property>
+   <property name="features">
+    <set>QDockWidget::AllDockWidgetFeatures</set>
+   </property>
    <property name="windowTitle">
     <string>视频</string>
    </property>
@@ -108,7 +112,7 @@
           <x>0</x>
           <y>0</y>
           <width>976</width>
-          <height>637</height>
+          <height>646</height>
          </rect>
         </property>
         <property name="minimumSize">
@@ -139,6 +143,21 @@
    </widget>
   </widget>
   <widget class="QDockWidget" name="dockWidget_settings">
+   <property name="minimumSize">
+    <size>
+     <width>500</width>
+     <height>690</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>500</width>
+     <height>524287</height>
+    </size>
+   </property>
+   <property name="floating">
+    <bool>false</bool>
+   </property>
    <property name="features">
     <set>QDockWidget::AllDockWidgetFeatures</set>
    </property>
@@ -154,7 +173,7 @@
       <widget class="QScrollArea" name="scrollArea_2">
        <property name="minimumSize">
         <size>
-         <width>650</width>
+         <width>450</width>
          <height>550</height>
         </size>
        </property>
@@ -169,13 +188,13 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>646</width>
-          <height>637</height>
+          <width>478</width>
+          <height>646</height>
          </rect>
         </property>
         <property name="minimumSize">
          <size>
-          <width>646</width>
+          <width>450</width>
           <height>540</height>
          </size>
         </property>
@@ -189,7 +208,7 @@
             </sizepolicy>
            </property>
            <property name="currentIndex">
-            <number>0</number>
+            <number>1</number>
            </property>
            <widget class="QWidget" name="tab_vfile">
             <attribute name="title">
@@ -459,6 +478,9 @@
             </item>
             <item row="12" column="0">
              <widget class="QLabel" name="label_shadowvar">
+              <property name="toolTip">
+               <string>值越低检测出越多阴影</string>
+              </property>
               <property name="text">
                <string>阴影检测阈值：</string>
               </property>
@@ -477,7 +499,7 @@
             <item row="14" column="0">
              <widget class="QLabel" name="label_foreproc">
               <property name="toolTip">
-               <string>噪音较少时才开启进一步降噪</string>
+               <string>噪音颗粒较小时才开启进一步降噪</string>
               </property>
               <property name="text">
                <string>开启形态学处理：</string>

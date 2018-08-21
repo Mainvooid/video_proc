@@ -15,11 +15,11 @@ __pycache__
 .idea
 .vscode
 
-
 /bin
 /build/main
 /data
 /docs
+/lib
 /log
 /venv
 

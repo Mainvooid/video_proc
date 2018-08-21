@@ -16,6 +16,7 @@ import sys
 import qdarkstyle
 from PyQt5.QtWidgets import QApplication
 import core.control.main_controller as control
+__version__ = "0.1.0"
 
 if __name__ == '__main__':
 
@@ -24,6 +25,9 @@ if __name__ == '__main__':
     # app.setOrganizationName("Glound")
     # app.setOrganizationDomain("51ias.com")
     # app.setApplicationName("Proc_Video_Demo")
+
+    # # 设置QSS样式
+    app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
 
     # 初始化窗口（GUI程序具体实现类）
     window = control.Window()
@@ -34,13 +38,13 @@ if __name__ == '__main__':
     # 最大化窗口（此时视频页最大可达1200*880）
     window.showMaximized()
 
-    # # 设置QSS样式
-    app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-
     # # 获取电脑屏幕大小
     # desktop = app.desktop().availableGeometry()  # (0,0,1920,1040)可获得的桌面（高度减了任务栏）
     # # screen=app.desktop().screenGeometry() #(0,0,1920,1080) 屏幕大小
+
+    # # 显示窗口
     # window.show()
+
     # # 获取应用窗口大小
     # size = window.frameGeometry()  # 应用的整体窗口形状，window.geometry()为客户区形状
     # # 显示居中

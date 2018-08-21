@@ -49,6 +49,9 @@ class MainModel(QObject):
         self._fname_temp = "../data"
         self._dname_temp = "../data"
 
+        # 隐藏centralwidget，以让dock占满窗口
+        self.view.centralwidget.hide()
+
         # 初始化设置界面
         self._init_scene_args()
 
@@ -107,6 +110,8 @@ class MainModel(QObject):
 
         self.view.pBtn_getBackground.setEnabled(False)
 
+        self.view.progressBar.hide()
+
         # 保存视图初始状态
         self.window_status.setValue("window_status", self.view.saveState())
 
@@ -126,7 +131,7 @@ class MainModel(QObject):
             self._dname_temp = dname
 
     def on_action_triggered_view_enabled(self, bool):
-        # 视图可编辑状态变化
+        # 主要控件，视图可编辑状态变化
 
         self.view.tabWidget.setEnabled(bool)
         self.view.widget_set.setEnabled(bool)
@@ -145,12 +150,17 @@ class MainModel(QObject):
             logger.debug("当前线程暂停，执行恢复动作")
             # 若为暂停状态
             self.thread.resume()
+
             self.on_action_triggered_view_enabled(False)
+
             self.view.action_run.setEnabled(False)
             self.view.action_pause.setEnabled(True)
             self.view.action_stop.setEnabled(True)
+
             self.view.statusbar.showMessage("已恢复", 3000)
             return 0
+
+        self.view.progressBar.show()
 
         self.view.action_run.setEnabled(False)
         self.view.action_pause.setEnabled(True)
@@ -185,11 +195,15 @@ class MainModel(QObject):
                                 det_shadow_var=self.view.dsBox_shadowvar.value())
 
             self.on_action_triggered_view_enabled(False)
+
             if self.view.cBox_autoback.checkState() == 0:
+                # 未选中自动更新，设置更新背景按钮可点击
                 self.view.pBtn_getBackground.setEnabled(True)
             else:
                 self.view.pBtn_getBackground.setEnabled(False)
+
             self.thread.start()
+
             self.view.statusbar.showMessage("开始处理！", 3000)
             logger.debug("开始处理")
         else:
@@ -221,16 +235,29 @@ class MainModel(QObject):
             logger.debug("线程已恢复")
 
     def on_action_stop_triggered(self):
+        
         logger.debug("准备停止")
         if self.thread.isAlive():
+            self.thread.stop()
+            # 等待工作线程停止完毕
+            self.thread.join()
+
             self.on_action_triggered_view_enabled(True)
-            if self.view.cBox_autoback.checkState()==0:
-                self.view.pBtn_getBackground.setEnabled(True)
+
+            self.view.progressBar.hide()
+
             self.view.action_run.setEnabled(True)
             self.view.action_pause.setEnabled(False)
             self.view.action_stop.setEnabled(False)
-            self.thread.stop()
-            self.thread.join()
+
+            if self.view.cBox_autoback.checkState()==0:
+                # 未选中自动更新，设置更新背景按钮可点击
+                self.view.pBtn_getBackground.setEnabled(True)
+            
+            # 按钮信息状态还原
+            self.view.pBtn_getBackground.setText("更新背景")
+            self.view.pBtn_showBackground.setText("显示背景图片")
+
             self.view.statusbar.showMessage("已停止", 3000)
             logger.debug("线程停止")
         else:
@@ -327,18 +354,20 @@ class MainModel(QObject):
         self.view.dialog=QDialog()
         about=Ui_Dialog()
         about.setupUi(self.view.dialog)
+
         # 只保留关闭按钮
         self.view.dialog.setWindowFlags(Qt.WindowCloseButtonHint)
+
         # 使用exec方法显示
         self.view.dialog.exec_()
 
     def on_var_change(self):
-        # TODO 线程暂停时参数可修改
+        # TODO 线程暂停时参数可修改（背景需自动更新）
 
         # 获取参数设置
         logger.debug("获取自定义参数")
-        self.cfg.CUSTOM.DET_SHADOW_FLAG = self.view.cBox_shadow.checkState()
-        self.cfg.CUSTOM.FORE_PROC_FLAG = self.view.cBox_foreproc.checkState()
+        self.cfg.CUSTOM.HAS_DET_SHADOW = self.view.cBox_shadow.checkState()
+        self.cfg.CUSTOM.HAS_FORE_PROC = self.view.cBox_foreproc.checkState()
         self.cfg.CUSTOM.HISTORY = self.view.sBox_history.value()
         self.cfg.CUSTOM.THRESHOLD = self.view.sBox_threshold.value()
         self.cfg.CUSTOM.AREA_SIZE = self.view.sBox_area.value()
@@ -355,32 +384,47 @@ class MainModel(QObject):
         # 切换多选框状态
         if self.cfg.CUSTOM != self.cfg.DEFAULT:
             logger.debug("切换多选框状态")
-            # 与_on_cBox_scene_changed的信号互斥，进行相关动作时需要屏蔽引起_on_cBox_scene_changed的信号
+            # 与_on_cBox_scene_changed的信号互斥，程序内部进行相关动作时需要屏蔽该信号
             self.view.cBox_scene.blockSignals(True)
             self.view.cBox_scene.setCurrentText("自定义")
             self.view.cBox_scene.blockSignals(False)
 
     def on_proc_finish_signal_triggered(self, average_time):
         # 线程完成，处理UI状态
-
+        
         logger.debug("线程完成或退出，收尾处理UI状态")
         self.on_action_triggered_view_enabled(True)
+
         self.view.action_run.setEnabled(True)
         self.view.action_pause.setEnabled(False)
         self.view.action_stop.setEnabled(False)
+
+        if self.view.cBox_autoback.checkState()==0:
+                # 未选中自动更新，设置更新背景按钮可点击
+                self.view.pBtn_getBackground.setEnabled(True)
+
+        # 按钮信息状态还原
+        self.view.pBtn_getBackground.setText("更新背景")
+        self.view.pBtn_showBackground.setText("显示背景图片")
+
         self.view.statusbar.showMessage("处理完成！帧平均处理用时：{:.2f} ms".format(average_time), 1000000)
 
     def on_progress_signal_refresh(self, progress_value, frame_proc_time):
         # 接收工作线程的进度信号与帧处理时间并显示
         self.view.statusbar.showMessage("处理中: {} % , 当前帧用时：{:.2f} ms".format(progress_value, frame_proc_time), 1000000)
-        self.view.progressBar.setValue(progress_value)
+        if progress_value == -1:
+            self.view.progressBar.setMaximum(0)
+        else:
+            self.view.progressBar.setValue(progress_value)
 
     def on_frame_signal_refresh(self, frame):
         # 接收工作线程的帧图像并显示
-
-        # 画面比例调整
-        fx = 960 / frame.shape[1]
-        fy = 540 / frame.shape[0]
+        # TODO 画面比例调整可选自适应或固定模式
+        # 画面比例调整,自适应 
+        width=self.view.label_showFrame.width() #960
+        height=self.view.label_showFrame.height() #540
+        fx = width / frame.shape[1]
+        fy = height / frame.shape[0]
 
         # 缩放
         frame = cv2.resize(frame, None, fx=fx, fy=fy)
