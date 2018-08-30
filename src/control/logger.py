@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 import logging
 import sys
 
-from core.control import settings
+from src.control import settings
 
 # 获取logger实例，如果参数为空则返回root logger
 logger = logging.getLogger()

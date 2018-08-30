@@ -18,8 +18,8 @@ import numpy as np
 import os
 import os.path as osp
 
-from core.control.logger import *
-from core.control import settings
+from src.control.logger import *
+from src.control import settings
 import init_path
 
 
@@ -44,14 +44,14 @@ class MotionDetThread(threading.Thread):
         self.fps = None
         self.LearningRate = -1
 
-    def setDirs(self, input, output_dir_name):
+    def set_dirs(self, video_input, output_dir_name):
         # 文件路径
-        self.input = input
+        self.input = video_input
         self.output_dir = output_dir_name
 
     # TODO 使用*args 和 **kwargs替换
-    def setArgs(self, history, threshold, area_size, background_ratio, undetected_size, blur_size, is_auto_back,
-                has_det_shadow, det_shadow_var, fore_proc, erode_shape):
+    def set_args(self, history, threshold, area_size, background_ratio, undetected_size, blur_size, is_auto_back,
+                 has_det_shadow, det_shadow_var, fore_proc, erode_shape):
         self.mog2_history = history
         self.mog2_varThreshold = threshold
         self.DETECT_SHADOWS_FLAG = has_det_shadow
@@ -65,13 +65,13 @@ class MotionDetThread(threading.Thread):
         self.AUTO_BACK_FLAG = is_auto_back
         self.det_shadow_var = det_shadow_var
 
-    def setFPS(self, fps):
+    def set_fps(self, fps):
         # 设置帧率
         self.fps = fps
 
-    def setLearningRate(self, LearningRate):
+    def set_learningrate(self, learningrate):
         # 设置帧率
-        self.LearningRate = LearningRate
+        self.LearningRate = learningrate
 
         # 初始化计数
         self.learningFrameNo = 0
@@ -111,9 +111,9 @@ class MotionDetThread(threading.Thread):
         total_frame_num = -1
 
         # 读帧并处理
-        frameNo = 0  # 第几帧
-        learningFrameNo = 0  # 记录背景更新帧数
-        isFirstLearn = True  # 是否是第一次更新背景
+        frame_no = 0  # 第几帧
+        learning_frame_no = 0  # 记录背景更新帧数
+        is_first_learn = True  # 是否是第一次更新背景
         motion_start, motion_count = 0, 0  # 运动帧计数
 
         if isinstance(self.input, int):
@@ -132,11 +132,11 @@ class MotionDetThread(threading.Thread):
             # codec = -1 # 从系统中选取
 
             # 视频帧率
-            if self.fps == None:
+            if self.fps is None:
                 self.fps = self.capture.get(cv2.CAP_PROP_FPS)
 
             # 视频通道数
-            isColor = True
+            is_color = True
 
             # 视频大小
             frame_size = (
@@ -147,37 +147,37 @@ class MotionDetThread(threading.Thread):
             output_file_name = osp.join(self.output_dir, "gen_" + output_name + ".avi")
 
             # 打开文件准备写入
-            self.writer.open(output_file_name, fourcc=codec, fps=self.fps, frameSize=frame_size, isColor=isColor)
+            self.writer.open(output_file_name, fourcc=codec, fps=self.fps, frameSize=frame_size, isColor=is_color)
 
             # 视频帧数
             total_frame_num = self.capture.get(cv2.CAP_PROP_FRAME_COUNT)
 
-        while (True):
+        while True:
             start_time = time.time()
 
             # 线程阻塞标志
             self._isNotPause.wait()
-            if (self._isRunning.isSet() == False) or (total_frame_num == frameNo):
+            if (self._isRunning.isSet() is False) or (total_frame_num == frame_no):
                 break
 
-            if (isFirstLearn or self.AUTO_BACK_FLAG) and learningFrameNo == self.mog2_history:
+            if (is_first_learn or self.AUTO_BACK_FLAG) and learning_frame_no == self.mog2_history:
                 # 保存第一次产生的背景，保存自动更新背景第一次产生背景之后的背景（非自动更新就不保存）
 
                 # 重置背景更新帧计数
-                learningFrameNo = 0
+                learning_frame_no = 0
 
                 # 重置标识
-                isFirstLearn = False
+                is_first_learn = False
 
                 # 若自动背景更新未开启则停止背景更新
-                if self.AUTO_BACK_FLAG == False:
+                if not self.AUTO_BACK_FLAG:
                     self.LearningRate = 0
 
                 # 保存的背景路径
                 back_img_path = osp.join(init_path.project_dir, "data\\background.jpg")
 
                 # 目录不存在则创建目录(为pyinstaller的兼容，正常应自动创建)
-                if osp.exists(osp.split(back_img_path)[0]) == False:
+                if not osp.exists(osp.split(back_img_path)[0]):
                     os.mkdir(osp.split(back_img_path)[0])
 
                 # 保存图片
@@ -193,8 +193,8 @@ class MotionDetThread(threading.Thread):
             if not ok:
                 logger.exception("读取视频异常!")
 
-            frameNo += 1
-            learningFrameNo += 1
+            frame_no += 1
+            learning_frame_no += 1
 
             # # 2层降采样可以提高20%效率，写入视频有BUG
             # frame=cv2.pyrDown(frame)
@@ -260,12 +260,12 @@ class MotionDetThread(threading.Thread):
                 # 面积太小的轮廓当成噪音
                 if cv2.contourArea(c) < self.area_size:
                     # 上一层轮廓 绿色
-                    if (hierarchy[0][i][1] != -1 and hierarchy != []):
+                    if hierarchy[0][i][1] != -1 and hierarchy != []:
                         cv2.drawContours(image=self.foreground, contours=contours, contourIdx=i, color=(0, 255, 0),
                                          thickness=3)
 
                     # 父轮廓 黄色
-                    if (hierarchy[0][i][2] != -1 and hierarchy != []):
+                    if hierarchy[0][i][2] != -1 and hierarchy != []:
                         cv2.drawContours(image=self.foreground, contours=contours, contourIdx=i, color=(0, 255, 255),
                                          thickness=3)
 
@@ -307,12 +307,12 @@ class MotionDetThread(threading.Thread):
                         #     cv2.drawContours(frame, contours, i, (255, 0, 0), 3)
 
                         # 上一层轮廓 绿色
-                        if (hierarchy[0][i][1] != -1 and hierarchy != []):
+                        if hierarchy[0][i][1] != -1 and hierarchy != []:
                             cv2.drawContours(image=frame, contours=contours, contourIdx=i, color=(0, 255, 0),
                                              thickness=3)
 
                         # 父轮廓 黄色
-                        if (hierarchy[0][i][2] != -1 and hierarchy != []):
+                        if hierarchy[0][i][2] != -1 and hierarchy != []:
                             cv2.drawContours(image=frame, contours=contours, contourIdx=i, color=(0, 255, 255),
                                              thickness=3)
 
@@ -320,7 +320,7 @@ class MotionDetThread(threading.Thread):
                         # if (hierarchy[0][i][3] != -1 and hierarchy != []):
                         #     cv2.drawContours(frame, contours, i, (0, 0, 255), 3)
 
-            if metion_flag == False:
+            if not metion_flag:
                 # 若当前帧非运动帧，跳到下一帧
                 logger.debug("当前帧非运动帧")
 
@@ -337,7 +337,7 @@ class MotionDetThread(threading.Thread):
                     progress_value = -1
                     self.model.progress_signal.emit(progress_value, frame_proc_time)
                 else:
-                    progress_value = frameNo / total_frame_num * 100
+                    progress_value = frame_no / total_frame_num * 100
                     self.model.progress_signal.emit(progress_value, frame_proc_time)
 
                 # 刷新页面防止卡顿
@@ -364,7 +364,7 @@ class MotionDetThread(threading.Thread):
                     r0 = cv2.minAreaRect(rect[0])  # input numpy array or scalar
 
                     # 循环中是否找到相交点的标记
-                    isFind = False
+                    is_find = False
 
                     # 从列表第2位开始搜索直到相交
                     for k in range(1, len(rect)):
@@ -372,7 +372,7 @@ class MotionDetThread(threading.Thread):
                         rk = cv2.minAreaRect(rect[k])
 
                         # 碰撞检测,判断是否相交，并计算相交区域的顶点（冗余）,输出左上,右下，右上,左下点坐标
-                        retval, intersectingRegion = cv2.rotatedRectangleIntersection(r0, rk)
+                        retval, intersecting_region = cv2.rotatedRectangleIntersection(r0, rk)
 
                         # if True 时，以所有前景合成一个框
                         if retval != cv2.INTERSECT_NONE:
@@ -395,12 +395,12 @@ class MotionDetThread(threading.Thread):
                             # 追加合并的矩形
                             rect.append(np.array([[x, y], [x + w, y], [x, y + h], [x + w, y + h]]))
 
-                            isFind = True
+                            is_find = True
                             unintersected_num = 0
 
                             break
 
-                    if isFind == False:
+                    if not is_find:
                         # logger.debug("当前没有交或含")
 
                         # 0位移到末尾参与后面可能发生的合并
@@ -419,9 +419,9 @@ class MotionDetThread(threading.Thread):
                 cv2.rectangle(img=frame, pt1=(x, y), pt2=(x + w, y + h), color=(255, 255, 0), thickness=3)
 
             # 更新运动帧计数并打印
-            if metion_flag and frameNo != 1:
+            if metion_flag and frame_no != 1:
                 if motion_start == 0:
-                    motion_start = frameNo
+                    motion_start = frame_no
 
                     # 在UI界面显示
                     self.model.frame_signal.emit(frame)
@@ -430,7 +430,7 @@ class MotionDetThread(threading.Thread):
                     if not isinstance(self.input, int):
                         self.writer.write(frame)
 
-                elif frameNo <= motion_start + motion_count + self.undetected_size:  # 允许n帧以内不连续的误差
+                elif frame_no <= motion_start + motion_count + self.undetected_size:  # 允许n帧以内不连续的误差
                     motion_count += 1
 
                     # 在UI界面显示
@@ -459,7 +459,7 @@ class MotionDetThread(threading.Thread):
                 progress_value = 99
                 self.model.progress_signal.emit(progress_value, frame_proc_time)
             else:
-                progress_value = frameNo / total_frame_num * 100
+                progress_value = frame_no / total_frame_num * 100
                 self.model.progress_signal.emit(progress_value, frame_proc_time)
 
             # 刷新页面防止卡顿
@@ -472,14 +472,14 @@ class MotionDetThread(threading.Thread):
         cv2.destroyAllWindows()
 
         # 计算平均处理时间
-        average_time = total_frame_time / frameNo
+        average_time = total_frame_time / frame_no
 
         # 发送处理完成信号
         self.model.proc_finish_signal.emit(average_time)
 
         logger.debug("帧平均处理时间:{}".format(average_time))
 
-        if self._isRunning.isSet() == False:
+        if not self._isRunning.isSet():
             logger.debug("因为用户停止，线程退出")
         else:
             logger.debug("线程执行完成！")

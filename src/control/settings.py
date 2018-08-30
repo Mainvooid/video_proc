@@ -20,7 +20,7 @@ import os
 import init_path
 
 # FLAGS
-isDEBUG=True
+isDEBUG = True
 
 # 初始化
 __C = EasyDict()
@@ -52,7 +52,7 @@ __C.DEFAULT.DET_SHADOW_VAR = 0.2
 # 开启形态学处理
 __C.DEFAULT.HAS_FORE_PROC = 0  # False
 # 腐蚀膨胀核尺寸
-__C.DEFAULT.ERODE_SHAPE = 2 # index (7,7)
+__C.DEFAULT.ERODE_SHAPE = 2  # index (7,7)
 
 # 自定义设置
 __C.CUSTOM.HISTORY = 900
@@ -65,7 +65,7 @@ __C.CUSTOM.IS_AUTO_BACK = 0
 __C.CUSTOM.HAS_DET_SHADOW = 2  # True(多选框状态0,1,2)
 __C.CUSTOM.DET_SHADOW_VAR = 0.2
 __C.CUSTOM.HAS_FORE_PROC = 0  # False
-__C.CUSTOM.ERODE_SHAPE = 2 # index (7,7)
+__C.CUSTOM.ERODE_SHAPE = 2  # index (7,7)
 
 
 def init_cfg(cfg=None):
@@ -88,4 +88,3 @@ def update_cfg(cfg=None):
     cfg.update(read_cfg())
 
 # init_cfg(motion_det_cfg)
-

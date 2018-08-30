@@ -8,6 +8,7 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
@@ -394,5 +395,3 @@ class Ui_MainWindow(object):
         self.action_view_restore.setShortcut(_translate("MainWindow", "Ctrl+V"))
         self.action_about.setText(_translate("MainWindow", "关于(&A)"))
         self.action_about.setToolTip(_translate("MainWindow", "关于"))
-
-import resource_rc

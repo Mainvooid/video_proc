@@ -15,7 +15,7 @@ from __future__ import unicode_literals
 import sys
 import qdarkstyle
 from PyQt5.QtWidgets import QApplication
-import core.control.main_controller as control
+import src.control.main_controller as control
 __version__ = "0.1.0"
 
 if __name__ == '__main__':

@@ -8,6 +8,7 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
@@ -45,5 +46,3 @@ class Ui_Dialog(object):
         self.label_3.setText(_translate("Dialog", "构建时间： 2018-08-21"))
         self.label_6.setText(_translate("Dialog", "Python: 3.6.6"))
         self.label_4.setText(_translate("Dialog", "Email: guobao.v@gmail.com"))
-
-import resource_rc

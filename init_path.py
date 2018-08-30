@@ -6,9 +6,11 @@
 """
 获取相关目录路径
 """
-import os,sys
+import os
+import sys
 
 project_dir = os.path.dirname(os.path.abspath(__file__))
+
 
 def add_path(path):
     if path not in sys.path:

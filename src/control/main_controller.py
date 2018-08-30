@@ -13,9 +13,9 @@ from __future__ import unicode_literals
 """
 from PyQt5.QtWidgets import QMainWindow
 
-from core.view.ui_main import *
-from core.model.main_mod import *
-from core.view import resource_rc
+from src.view.ui_main import *
+from src.model.main_mod import *
+
 
 class Window(QMainWindow, Ui_MainWindow):
     """
@@ -26,13 +26,13 @@ class Window(QMainWindow, Ui_MainWindow):
     def __init__(self):
         # 构造函数
         super(Window, self).__init__()
-        self._initUi()
+        self._init_ui()
 
-    def _initUi(self):
+    def _init_ui(self):
         # 初始化UI（视图）
         self.setupUi(self)
-        self._initConnect()
+        self._init_connect()
 
-    def _initConnect(self):
+    def _init_connect(self):
         # 调用自定义信号和槽函数类（模型）
         self.model = MainModel(view=self)
