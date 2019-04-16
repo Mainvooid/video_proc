@@ -45,18 +45,26 @@
 
 ## 使用方法
 直接执行`main.py`
+由于开发环境较为复杂,本项目未经单独测试,如果有问题请提issue.
+
+#### 关于打包
+建议配置`main.spec`并配合下方的扩展工具来打包.
+
+注意事项:打包后运行不成功可能是资源或第三方依赖库未成功配置,详细检查.spec和扩展工具命令确保都能索引到相关资源.
+
+详情参考Pyinstaller官方文档.
+
+更多待补充
 
 ## 应用界面
 ![image_1](docs/img/image_1.jpg)
 ![image_2](docs/img/image_2.jpg)
 ![image_3](docs/img/image_3.png)
 
-
-
 ## 扩展工具
-将常用命令设置为扩展工具,以下供参考.
-如果虚拟环境在根目录下,相关程序路径指定`$ProjectFileDir$\venv`
-如果由pipenv管理,则类似在`C:\Users\用户名\.virtualenvs\项目名-n9RjFZIL`
+将常用命令设置为扩展工具分便调试,以下供参考.
+如果虚拟环境在项目根目录下,相关程序路径指定`$ProjectFileDir$\venv`
+如果环境由pipenv管理,则相关程序类似在`C:\Users\用户名\.virtualenvs\项目名-n9RjFZIL`
 
 - name: `requirements`
    - Description: `pip freeze > requirements.txt`
