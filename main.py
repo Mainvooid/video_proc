@@ -22,11 +22,11 @@ if __name__ == '__main__':
 
     # 创建应用程序
     app = QApplication(sys.argv)
-    # app.setOrganizationName("Glound")
-    # app.setOrganizationDomain("51ias.com")
-    # app.setApplicationName("Proc_Video_Demo")
+    app.setOrganizationName("aimao")
+    app.setOrganizationDomain("aimao.co")
+    app.setApplicationName("Proc_Video_Demo")
 
-    # # 设置QSS样式
+    # 设置QSS样式
     app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
 
     # 初始化窗口（GUI程序具体实现类）

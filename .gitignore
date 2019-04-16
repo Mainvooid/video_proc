@@ -6,21 +6,19 @@
 *.pkg
 *.pyz
 *.manifest
-
+*.log
 *.avi
 *.mp4
+*.jpg
+*.dll
+*.bak
 
+test.py
+test.ui
 __pycache__
 
 .idea
 .vscode
 
-/bin
+/bin/main
 /build/main
-/data
-/docs
-/lib
-/log
-/venv
-
-

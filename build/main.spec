@@ -5,7 +5,7 @@ block_cipher = None
 
 a = Analysis(['..\\main.py'],
              pathex=['D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\venv\\Lib\\site-packages\\PyQt5\\Qt\\bin', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\res', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\lib', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\core', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\core\\view', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\core\\model', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\core\\control', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\conf', 'D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\build'],
-             binaries=[('D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\lib\\opencv_ffmpeg342_64.dll', './'), ('D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\lib\\openh264-1.7.0-win64.dll', './')],
+             binaries=[('D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\lib\\opencv_ffmpeg400_64.dll', './'), ('D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\lib\\openh264-1.8.0-win64.dll', './')],
              datas=[('D:\\ProgramSourceCode\\PycharmProjects\\video_proc\\conf\\settings.json', './conf')],
              hiddenimports=[],
              hookspath=[],

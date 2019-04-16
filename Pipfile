@@ -1,0 +1,17 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+qdarkstyle = "==2.5.4"
+"pyqt5" = "*"
+opencv-contrib-python = "*"
+easydict = "*"
+
+[dev-packages]
+"pyinstaller-dev" = {file = "https://github.com/pyinstaller/pyinstaller/archive/develop.zip"}
+pycryptodome = "*"
+
+[requires]
+python_version = "3.6"

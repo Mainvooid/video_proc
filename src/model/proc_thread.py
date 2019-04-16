@@ -70,7 +70,7 @@ class MotionDetThread(threading.Thread):
         self.fps = fps
 
     def set_learningrate(self, learningrate):
-        # 设置帧率
+        # 设置学习率
         self.LearningRate = learningrate
 
         # 初始化计数
@@ -160,7 +160,7 @@ class MotionDetThread(threading.Thread):
             if (self._isRunning.isSet() is False) or (total_frame_num == frame_no):
                 break
 
-            if (is_first_learn or self.AUTO_BACK_FLAG) and learning_frame_no == self.mog2_history:
+            if (is_first_learn or self.AUTO_BACK_FLAG) and (learning_frame_no == self.mog2_history):
                 # 保存第一次产生的背景，保存自动更新背景第一次产生背景之后的背景（非自动更新就不保存）
 
                 # 重置背景更新帧计数
@@ -236,24 +236,27 @@ class MotionDetThread(threading.Thread):
 
             # 前景处理过程，形态学腐蚀，膨胀
             if self.FORE_PROC_FLAG is True:
-                cv2.dilate(src=self.foreground, dst=self.foreground, kernel=np.ones(shape=self.d_shape, dtype=np.uint8))
-                cv2.erode(src=self.foreground, dst=self.foreground, kernel=np.ones(shape=self.e_shape, dtype=np.uint8))
+                #当前闭操作
+                # cv2.dilate(src=self.foreground, dst=self.foreground, kernel=np.ones(shape=self.d_shape, dtype=np.uint8))
+                # cv2.erode(src=self.foreground, dst=self.foreground, kernel=np.ones(shape=self.e_shape, dtype=np.uint8))
+
+                # TODO 形态学处理修改为下面的调用方法
+                # 创建一个3*3的椭圆核
+                kernel = cv2.getStructuringElement(shape=cv2.MORPH_ELLIPSE,
+                                                   ksize=np.ones(shape=self.e_shape, dtype=np.uint8))
+                # 形态学闭运算去噪点
+                self.foreground = cv2.morphologyEx(self.foreground, cv2.MORPH_CLOSE, kernel)
 
                 if settings.isDEBUG:
                     a3 = cv2.resize(self.foreground, None, fx=0.25, fy=0.25)
                     cv2.imshow("3 after dilate erode", a3)
                     cv2.waitKey(1)
 
-                # # 创建一个3*3的椭圆核
-                # kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-                # # 形态学开运算去噪点
-                # foreground = cv2.morphologyEx(foreground, cv2.MORPH_OPEN, kernel)
-
             # TODO 对二值图进行更有效的滤波
             # 在二值前景图中找轮廓，用最小矩形包围,hierarchy[i][.]:下一条0；前一条1,第一条子轮廓2，父轮廓3
-            image, contours, hierarchy = cv2.findContours(image=self.foreground,
-                                                          mode=cv2.RETR_TREE,
-                                                          method=cv2.CHAIN_APPROX_SIMPLE)
+            contours, hierarchy = cv2.findContours(image=self.foreground,
+                                                   mode=cv2.RETR_TREE,
+                                                   method=cv2.CHAIN_APPROX_SIMPLE)
             # 下面俩步为了增强光照鲁棒性，有时候轮廓的行为像噪声，可以尝试减除
             # TODO 提高对光照的鲁棒性，有时候轮廓的行为像噪声，可以尝试减除，或者判断当小轮廓太多时重新启用背景更新
             for i, c in enumerate(contours):
@@ -277,13 +280,13 @@ class MotionDetThread(threading.Thread):
                 cv2.waitKey(1)
 
             # 去掉轮廓本身的噪音后重新计算轮廓
-            image, contours, hierarchy = cv2.findContours(image=self.foreground,
+            contours, hierarchy = cv2.findContours(image=self.foreground,
                                                           mode=cv2.RETR_TREE,
                                                           method=cv2.CHAIN_APPROX_SIMPLE)
 
             # 显示轮廓
             rect = []
-            metion_flag = False
+            motion_flag = False
 
             # 判断当前帧是否是运动帧
             for i, c in enumerate(contours):
@@ -291,7 +294,7 @@ class MotionDetThread(threading.Thread):
                 if cv2.contourArea(c) > self.area_size:
                     # TODO 计算轮廓，判断运动帧，是否可以采用图像金字塔先降采样
                     # 判断为运动帧
-                    metion_flag = True
+                    motion_flag = True
 
                     # 包住轮廓的最小矩形的坐标（x，y为左上点坐标）
                     (x, y, w, h) = cv2.boundingRect(c)
@@ -320,7 +323,7 @@ class MotionDetThread(threading.Thread):
                         # if (hierarchy[0][i][3] != -1 and hierarchy != []):
                         #     cv2.drawContours(frame, contours, i, (0, 0, 255), 3)
 
-            if not metion_flag:
+            if not motion_flag:
                 # 若当前帧非运动帧，跳到下一帧
                 logger.debug("当前帧非运动帧")
 
@@ -374,7 +377,7 @@ class MotionDetThread(threading.Thread):
                         # 碰撞检测,判断是否相交，并计算相交区域的顶点（冗余）,输出左上,右下，右上,左下点坐标
                         retval, intersecting_region = cv2.rotatedRectangleIntersection(r0, rk)
 
-                        # if True 时，以所有前景合成一个框
+                        # if True 时，将所有前景合成一个框
                         if retval != cv2.INTERSECT_NONE:
                             # 如果相交或内含，合并点集
                             points = np.vstack((rect[0], rect[k]))
@@ -419,7 +422,7 @@ class MotionDetThread(threading.Thread):
                 cv2.rectangle(img=frame, pt1=(x, y), pt2=(x + w, y + h), color=(255, 255, 0), thickness=3)
 
             # 更新运动帧计数并打印
-            if metion_flag and frame_no != 1:
+            if motion_flag and frame_no != 1:
                 if motion_start == 0:
                     motion_start = frame_no
 

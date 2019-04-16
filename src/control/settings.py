@@ -20,7 +20,7 @@ import os
 import init_path
 
 # FLAGS
-isDEBUG = True
+isDEBUG = False
 
 # 初始化
 __C = EasyDict()

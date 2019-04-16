@@ -1,13 +1,13 @@
 {
     "CUSTOM": {
-        "AREA_SIZE": 50,
+        "AREA_SIZE": 500,
         "BACK_RATIO": 0.85,
         "BLUR_SIZE": 5,
         "DET_SHADOW_VAR": 0.2,
-        "ERODE_SHAPE": 0,
-        "HAS_DET_SHADOW": 0,
+        "ERODE_SHAPE": 1,
+        "HAS_DET_SHADOW": 2,
         "HAS_FORE_PROC": 2,
-        "HISTORY": 100,
+        "HISTORY": 900,
         "IS_AUTO_BACK": 0,
         "THRESHOLD": 100,
         "UN_DET_SIZE": 10

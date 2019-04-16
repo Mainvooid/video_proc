@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import QMainWindow
 
 from src.view.ui_main import *
 from src.model.main_mod import *
+from src.view import resource_rc
 
 
 class Window(QMainWindow, Ui_MainWindow):

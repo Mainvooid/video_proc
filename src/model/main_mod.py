@@ -117,7 +117,7 @@ class MainModel(QObject):
         # TODO 可以开启多文件选择，选择的文件通过多进程进一步处理
 
         fname, ftype = QFileDialog.getOpenFileName(self.view, "选取文件", self._fname_temp,
-                                                   "Video Files(*.mp4;*.avi;*.rmvb;*.mkv);;All Files(*.*)")
+                                                   "Video Files(*.mp4;*.avi;*.rmvb;*.mkv;*.wmv;*.3gp);;All Files(*.*)")
         if fname:
             self.view.lineEdit_videoFile.setText(fname)
             self._fname_temp = fname
