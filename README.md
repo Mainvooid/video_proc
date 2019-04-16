@@ -42,10 +42,16 @@
 │      └─ ui_main.py              - 主界面布局
 └─venv                    - 虚拟环境目录(环境由pipenv在项目外管理,必要时可拷贝一份在此)
 ```
+
+## 使用方法
+直接执行`main.py`
+
 ## 应用界面
-![image_1](docs/image_1.jpg)
-![image_2](docs/image_2.jpg)
-![image_3](docs/image_3.png)
+![image_1](docs/img/image_1.jpg)
+![image_2](docs/img/image_2.jpg)
+![image_3](docs/img/image_3.png)
+
+
 
 ## 扩展工具
 将常用命令设置为扩展工具,以下供参考.

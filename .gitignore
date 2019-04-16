@@ -11,6 +11,7 @@
 *.mp4
 *.dll
 *.bak
+*.rar
 
 test.py
 test.ui
