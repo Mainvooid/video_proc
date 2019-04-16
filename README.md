@@ -10,9 +10,9 @@
 
 ## 目录结构
 ```
-.        
+.
 ├─bin                     - 可执行文件目录
-│  └─main                     - Pyinstaller打包结果目录                 
+│  └─main                     - Pyinstaller打包结果目录
 ├─build                   - 构建目录
 │  │  main.spec               - Pyinstaller配置文件(需要修改)
 │  └─main                     - Pyinstaller打包临时目录
@@ -20,9 +20,9 @@
 │     resource.qrc            - PyQt5资源配置
 │     settings.json           - 算法参数配置
 │     window_status.ini       - 窗口位置配置
-│      
+│
 ├─data                    - 数据目录(存放视频数据或者建模出来的背景图片)
-├─docs                    - 项目文档目录    
+├─docs                    - 项目文档目录
 ├─lib                     - 第三方库目录
 ├─log                     - 日志文件目录
 ├─res                     - 应用程序资源目录
@@ -59,7 +59,7 @@
    - Working dir: `$FileDir$`
 - name: `tree`
    - Description: `导出目录结构树`
-   - Program: 
+   - Program:
    - Arguments: `tree /F > tree.txt`
    - Working dir: `$ProjectFileDir$`
 - name: `grab-version`
